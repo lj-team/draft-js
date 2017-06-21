@@ -50,13 +50,17 @@ function removeRangeFromContentState(
       .concat(endBlock.getCharacterList().slice(endOffset));
   }
 
-  var modifiedStart = startBlock.merge({
-    text: (
-      startBlock.getText().slice(0, startOffset) +
-      endBlock.getText().slice(endOffset)
-    ),
-    characterList,
-  });
+  var startIsAtomic = startBlock.getType() === 'atomic';
+  var modifiedStart = startIsAtomic ?
+    null :
+    startBlock.merge({
+      text: (
+        startBlock.getText().slice(0, startOffset) +
+        endBlock.getText().slice(endOffset)
+      ),
+      characterList,
+    })
+  ;
 
   var newBlocks = blockMap
     .toSeq()
@@ -67,14 +71,19 @@ function removeRangeFromContentState(
 
   blockMap = blockMap.merge(newBlocks).filter(block => !!block);
 
+  var keyAfterStart = contentState.getKeyAfter(startKey);
+  var keyBeforeStart = contentState.getKeyAfter(startKey);
+  var newSelectionKey = startIsAtomic ? keyAfterStart || keyBeforeStart : startKey;
+  var newSelectionOffset = startIsAtomic ? 0 : startOffset;
+
   return contentState.merge({
     blockMap,
     selectionBefore: selectionState,
     selectionAfter: selectionState.merge({
-      anchorKey: startKey,
-      anchorOffset: startOffset,
-      focusKey: startKey,
-      focusOffset: startOffset,
+      anchorKey: newSelectionKey,
+      anchorOffset: newSelectionOffset,
+      focusKey: newSelectionKey,
+      focusOffset: newSelectionOffset,
       isBackward: false,
     }),
   });
