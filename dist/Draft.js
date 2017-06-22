@@ -10797,9 +10797,9 @@ var Draft =
 	    return !!block;
 	  });
 
-	  var keyAfterStart = contentState.getKeyAfter(startKey);
-	  var keyBeforeStart = contentState.getKeyAfter(startKey);
-	  var newSelectionKey = startIsAtomic ? keyAfterStart || keyBeforeStart : startKey;
+	  var keyBeforeSelection = contentState.getKeyBefore(startKey);
+	  var keyAfterSelection = contentState.getKeyAfter(endKey);
+	  var newSelectionKey = startIsAtomic ? keyAfterSelection || keyBeforeSelection : startKey;
 	  var newSelectionOffset = startIsAtomic ? 0 : startOffset;
 
 	  return contentState.merge({
