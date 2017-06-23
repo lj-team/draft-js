@@ -34,11 +34,7 @@ const AtomicBlockUtils = {
 
     const afterRemoval = DraftModifier.removeRange(contentState, selectionState, 'backward');
 
-    const targetSelection = afterRemoval.getSelectionAfter();
-    const afterSplit = DraftModifier.splitBlock(afterRemoval, targetSelection);
-    const insertionTarget = afterSplit.getSelectionAfter();
-
-    const asAtomicBlock = DraftModifier.setBlockType(afterSplit, insertionTarget, 'atomic');
+    const insertionTarget = afterRemoval.getSelectionAfter();
 
     const charData = CharacterMetadata.create({ entity: entityKey });
 
@@ -56,7 +52,7 @@ const AtomicBlockUtils = {
 
     const fragment = BlockMapBuilder.createFromArray(fragmentArray);
 
-    const withAtomicBlock = DraftModifier.replaceWithFragment(asAtomicBlock, insertionTarget, fragment);
+    const withAtomicBlock = DraftModifier.replaceWithFragment(afterRemoval, insertionTarget, fragment);
 
     const newContent = withAtomicBlock.merge({
       selectionBefore: selectionState,
