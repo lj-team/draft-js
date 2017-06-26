@@ -5765,6 +5765,11 @@ var Draft =
 
 	    var fragmentArray = [new ContentBlock({
 	      key: generateRandomKey(),
+	      type: 'unstyled',
+	      text: '',
+	      characterList: List()
+	    }), new ContentBlock({
+	      key: generateRandomKey(),
 	      type: 'atomic',
 	      text: character,
 	      characterList: List(Repeat(charData, character.length))
@@ -9990,10 +9995,13 @@ var Draft =
 	    var headCharacters = chars.slice(0, targetOffset);
 	    var modifiedHead;
 	    if (firstFragmentPartIsAtomic) {
-	      modifiedHead = block.merge({
-	        text: headText,
-	        characterList: headCharacters
-	      });
+	      if (headText) {
+	        modifiedHead = block.merge({
+	          text: headText,
+	          characterList: headCharacters
+	        });
+	        newBlockArr.push(modifiedHead);
+	      }
 	    } else {
 	      var appendToHead = fragment.first();
 
@@ -10003,8 +10011,8 @@ var Draft =
 	        type: headText ? block.getType() : appendToHead.getType(),
 	        data: appendToHead.getData()
 	      });
+	      newBlockArr.push(modifiedHead);
 	    }
-	    newBlockArr.push(modifiedHead);
 
 	    // Insert fragment blocks after the head and before the tail.
 	    fragment.slice(firstFragmentPartIsAtomic ? 0 : 1, lastFragmentPartIsAtomic ? fragmentSize : fragmentSize - 1).forEach(function (fragmentBlock) {
