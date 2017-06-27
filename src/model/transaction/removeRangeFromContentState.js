@@ -13,6 +13,7 @@
 'use strict';
 
 var Immutable = require('immutable');
+var generateRandomKey = require('generateRandomKey');
 
 import type CharacterMetadata from 'CharacterMetadata';
 import type ContentState from 'ContentState';
@@ -77,6 +78,23 @@ function removeRangeFromContentState(
   var keyAfterSelection = contentState.getKeyAfter(endKey);
   var newSelectionKey = startIsAtomic ? keyAfterSelection || keyBeforeSelection : startKey;
   var newSelectionOffset = startIsAtomic ? 0 : startOffset;
+
+  if (!blockMap.size) {
+    var newKey = generateRandomKey();
+    var newBlock = startBlock.merge({
+      text: '',
+      type: 'unstyled',
+      characterList: Immutable.List(),
+      key: newKey,
+    });
+    blockMap = blockMap.merge(
+      Immutable.OrderedMap(
+        [[newKey, newBlock]]
+      )
+    );
+    newSelectionKey = newKey;
+    newSelectionOffset = 0;
+  }
 
   return contentState.merge({
     blockMap,
