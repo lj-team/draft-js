@@ -48,6 +48,12 @@ function getSelectionForEvent(
   }
 
   node = nullthrows(node);
+
+  // Not a block
+  if (node && node.attributes && !node.attributes['data-block']) {
+    return null;
+  }
+
   offset = nullthrows(offset);
   const offsetKey = nullthrows(findAncestorOffsetKey(node));
 
