@@ -10767,6 +10767,7 @@ var Draft =
 	'use strict';
 
 	var Immutable = __webpack_require__(2);
+	var generateRandomKey = __webpack_require__(7);
 
 	function removeRangeFromContentState(contentState, selectionState) {
 
@@ -10813,6 +10814,19 @@ var Draft =
 	  var keyAfterSelection = contentState.getKeyAfter(endKey);
 	  var newSelectionKey = startIsAtomic ? keyAfterSelection || keyBeforeSelection : startKey;
 	  var newSelectionOffset = startIsAtomic ? 0 : startOffset;
+
+	  if (!blockMap.size) {
+	    var newKey = generateRandomKey();
+	    var newBlock = startBlock.merge({
+	      text: '',
+	      type: 'unstyled',
+	      characterList: Immutable.List(),
+	      key: newKey
+	    });
+	    blockMap = blockMap.merge(Immutable.OrderedMap([[newKey, newBlock]]));
+	    newSelectionKey = newKey;
+	    newSelectionOffset = 0;
+	  }
 
 	  return contentState.merge({
 	    blockMap: blockMap,
