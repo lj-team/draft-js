@@ -827,6 +827,14 @@ var Draft =
 	  moveText: function moveText(contentState, removalRange, targetRange) {
 	    var movedFragment = getContentStateFragment(contentState, removalRange);
 
+	    // Moving multiblock fragment into last block affected  by removal range,
+	    // i.e. into block that will be removed at first step.
+	    // So swap steps order and do removal as a last thing.
+	    if (removalRange.getStartKey() !== removalRange.getEndKey() && targetRange.getStartKey() === targetRange.getEndKey() && removalRange.getEndKey() === targetRange.getStartKey()) {
+	      var afterReplace = DraftModifier.replaceWithFragment(contentState, targetRange, movedFragment);
+	      return DraftModifier.removeRange(afterReplace, removalRange, 'backward');
+	    }
+
 	    var afterRemoval = DraftModifier.removeRange(contentState, removalRange, 'backward');
 
 	    return DraftModifier.replaceWithFragment(afterRemoval, targetRange, movedFragment);
