@@ -76,8 +76,28 @@ var DraftEditorCompositionHandler = {
    * Google Input Tools on Windows 8.1 fires `compositionend` three times.
    */
   onCompositionEnd: function(editor: DraftEditor, e: SyntheticInputEvent): void {
+    var node = document.getSelection().anchorNode;
+    var textContent = node.textContent;
+    var offset = document.getSelection().anchorOffset;
+    var documentSelection = document.getSelection();
+    var inFrontOfWord = false;
+    var noLetterBefore = !textContent[offset - 1] || textContent[offset - 1] === ' ';
+    var isLetterAfter = textContent[offset] && textContent[offset] !== ' ';
+    if (
+      documentSelection.isCollapsed &&
+      noLetterBefore &&
+      isLetterAfter
+    ) {
+      inFrontOfWord = true;
+    }
     resolved = false;
     stillComposing = false;
+    if (inFrontOfWord) {
+      // This is an especially bug-prone case
+      // for composition handling,
+      // so try not to mess with browser's work here
+      return;
+    }
     compositionTextData = e.data;
     setTimeout(() => {
       if (!resolved) {
