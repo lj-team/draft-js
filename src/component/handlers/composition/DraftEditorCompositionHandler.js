@@ -15,6 +15,10 @@
 const DraftModifier = require('DraftModifier');
 const EditorState = require('EditorState');
 const Keys = require('Keys');
+var UserAgent = require('UserAgent');
+
+var isAndroid = UserAgent.isPlatform('Android');
+var isChrome = UserAgent.isBrowser('Chrome');
 
 const getEntityKeyForSelection = require('getEntityKeyForSelection');
 const isSelectionAtLeafStart = require('isSelectionAtLeafStart');
@@ -81,24 +85,26 @@ var DraftEditorCompositionHandler = {
     var offset = document.getSelection().anchorOffset;
     var documentSelection = document.getSelection();
     var inFrontOfWord = false;
-    var noLetterBefore = !textContent[offset - 1] || textContent[offset - 1] === ' ';
-    var isLetterAfter = textContent[offset] && textContent[offset] !== ' ';
+    var letterBefore = textContent[offset - 1] && textContent[offset - 1] !== ' ';
+    var letterAfter = textContent[offset] && textContent[offset] !== ' ';
     if (
       documentSelection.isCollapsed &&
-      noLetterBefore &&
-      isLetterAfter
+      !letterBefore &&
+      letterAfter
     ) {
       inFrontOfWord = true;
     }
-    resolved = false;
-    stillComposing = false;
-    if (inFrontOfWord) {
+    if (inFrontOfWord && isAndroid && isChrome) {
       // This is an especially bug-prone case
       // for composition handling,
       // so try not to mess with browser's work here
       return;
     }
-    compositionTextData = e.data;
+    resolved = false;
+    stillComposing = false;
+    if (isAndroid && isChrome) {
+      compositionTextData = e.data;
+    }
     setTimeout(() => {
       if (!resolved) {
         DraftEditorCompositionHandler.resolveComposition(editor);

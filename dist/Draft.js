@@ -6499,6 +6499,10 @@ var Draft =
 	var DraftModifier = __webpack_require__(4);
 	var EditorState = __webpack_require__(1);
 	var Keys = __webpack_require__(30);
+	var UserAgent = __webpack_require__(8);
+
+	var isAndroid = UserAgent.isPlatform('Android');
+	var isChrome = UserAgent.isBrowser('Chrome');
 
 	var getEntityKeyForSelection = __webpack_require__(27);
 	var isSelectionAtLeafStart = __webpack_require__(51);
@@ -6563,20 +6567,22 @@ var Draft =
 	    var offset = document.getSelection().anchorOffset;
 	    var documentSelection = document.getSelection();
 	    var inFrontOfWord = false;
-	    var noLetterBefore = !textContent[offset - 1] || textContent[offset - 1] === ' ';
-	    var isLetterAfter = textContent[offset] && textContent[offset] !== ' ';
-	    if (documentSelection.isCollapsed && noLetterBefore && isLetterAfter) {
+	    var letterBefore = textContent[offset - 1] && textContent[offset - 1] !== ' ';
+	    var letterAfter = textContent[offset] && textContent[offset] !== ' ';
+	    if (documentSelection.isCollapsed && !letterBefore && letterAfter) {
 	      inFrontOfWord = true;
 	    }
-	    resolved = false;
-	    stillComposing = false;
-	    if (inFrontOfWord) {
+	    if (inFrontOfWord && isAndroid && isChrome) {
 	      // This is an especially bug-prone case
 	      // for composition handling,
 	      // so try not to mess with browser's work here
 	      return;
 	    }
-	    compositionTextData = e.data;
+	    resolved = false;
+	    stillComposing = false;
+	    if (isAndroid && isChrome) {
+	      compositionTextData = e.data;
+	    }
 	    setTimeout(function () {
 	      if (!resolved) {
 	        DraftEditorCompositionHandler.resolveComposition(editor);
