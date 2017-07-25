@@ -47,11 +47,29 @@ function editOnInput(editor: DraftEditor): void {
   var domSelection = global.getSelection();
 
   var {anchorNode, isCollapsed} = domSelection;
-  if (anchorNode.nodeType !== Node.TEXT_NODE) {
+
+  var onNormalTextNode = anchorNode.nodeType === Node.TEXT_NODE;
+
+  // Anchor node is one of the block's subcontainers.
+  // That happens when full block's content is deleted
+  // via mobile soft keyboard.
+  var onSubcontainerNode = (
+    anchorNode.nodeType === Node.ELEMENT_NODE &&
+    anchorNode.className &&
+    anchorNode.className.indexOf('public-DraftStyleDefault-block') > -1
+  );
+
+  if (!(
+    onNormalTextNode ||
+    onSubcontainerNode
+  )) {
     return;
   }
 
   var domText = anchorNode.textContent;
+
+  var editorDOMBroken = onSubcontainerNode && domText === '';
+
   var editorState = editor._latestEditorState;
   var offsetKey = nullthrows(findAncestorOffsetKey(anchorNode));
   var {blockKey, decoratorKey, leafKey} = DraftOffsetKey.decode(offsetKey);
@@ -145,6 +163,10 @@ function editOnInput(editor: DraftEditor): void {
       changeType
     )
   );
+
+  if (editorDOMBroken) {
+    editor.restoreEditorDOM();
+  }
 }
 
 module.exports = editOnInput;
