@@ -6981,11 +6981,6 @@ var Draft =
 
 	  node = nullthrows(node);
 
-	  // Not a block
-	  if (node && node.attributes && !node.attributes['data-block']) {
-	    return null;
-	  }
-
 	  offset = nullthrows(offset);
 	  var offsetKey = nullthrows(findAncestorOffsetKey(node));
 
