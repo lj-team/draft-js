@@ -7180,9 +7180,9 @@ var Draft =
 
 	    var _props = this.props,
 	        blockKey = _props.blockKey,
-	        start = _props.start,
-	        text = _props.text;
+	        start = _props.start;
 
+	    var text = this.getText();
 	    var end = start + text.length;
 	    if (!selection.hasEdgeWithin(blockKey, start, end)) {
 	      return;
@@ -7218,7 +7218,7 @@ var Draft =
 	    this._setSelection();
 	  };
 
-	  DraftEditorLeaf.prototype.render = function render() {
+	  DraftEditorLeaf.prototype.getText = function getText() {
 	    var text = this.props.text;
 
 	    // If the leaf is at the end of its block and ends in a soft newline, append
@@ -7229,6 +7229,11 @@ var Draft =
 	    if (text.endsWith('\n') && this.props.isLast) {
 	      text += '\n';
 	    }
+	    return text;
+	  };
+
+	  DraftEditorLeaf.prototype.render = function render() {
+	    var text = this.getText();
 
 	    var _props2 = this.props,
 	        customStyleMap = _props2.customStyleMap,

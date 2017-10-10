@@ -81,7 +81,8 @@ class DraftEditorLeaf extends React.Component {
       return;
     }
 
-    const {blockKey, start, text} = this.props;
+    const {blockKey, start} = this.props;
+    const text = this.getText();
     const end = start + text.length;
     if (!selection.hasEdgeWithin(blockKey, start, end)) {
       return;
@@ -121,7 +122,7 @@ class DraftEditorLeaf extends React.Component {
     this._setSelection();
   }
 
-  render(): React.Element<any> {
+  getText(): void {
     let {text} = this.props;
 
     // If the leaf is at the end of its block and ends in a soft newline, append
@@ -131,6 +132,11 @@ class DraftEditorLeaf extends React.Component {
     if (text.endsWith('\n') && this.props.isLast) {
       text += '\n';
     }
+    return text;
+  }
+
+  render(): React.Element<any> {
+    let text = this.getText();
 
     const {customStyleMap, customStyleFn, offsetKey, styleSet} = this.props;
     let styleObj = styleSet.reduce((map, styleName) => {
