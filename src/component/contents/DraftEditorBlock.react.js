@@ -149,6 +149,7 @@ class DraftEditorBlock extends React.Component {
             customStyleMap={this.props.customStyleMap}
             customStyleFn={this.props.customStyleFn}
             isLast={ii === lastLeafSet && jj === lastLeaf}
+            setDraftEditorSelectionCustom={this.props.setDraftEditorSelectionCustom}
           />
         );
       }).toArray();

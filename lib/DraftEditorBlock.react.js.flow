@@ -119,7 +119,7 @@ class DraftEditorBlock extends React.Component {
         var offsetKey = DraftOffsetKey.encode(blockKey, ii, jj);
         var start = leaf.get('start');
         var end = leaf.get('end');
-        return <DraftEditorLeaf key={offsetKey} offsetKey={offsetKey} blockKey={blockKey} start={start} selection={hasSelection ? this.props.selection : undefined} forceSelection={this.props.forceSelection} text={text.slice(start, end)} styleSet={block.getInlineStyleAt(start)} customStyleMap={this.props.customStyleMap} customStyleFn={this.props.customStyleFn} isLast={ii === lastLeafSet && jj === lastLeaf} />;
+        return <DraftEditorLeaf key={offsetKey} offsetKey={offsetKey} blockKey={blockKey} start={start} selection={hasSelection ? this.props.selection : undefined} forceSelection={this.props.forceSelection} text={text.slice(start, end)} styleSet={block.getInlineStyleAt(start)} customStyleMap={this.props.customStyleMap} customStyleFn={this.props.customStyleFn} isLast={ii === lastLeafSet && jj === lastLeaf} setDraftEditorSelectionCustom={this.props.setDraftEditorSelectionCustom} />;
       }).toArray();
 
       var decoratorKey = leafSet.get('decoratorKey');

@@ -138,6 +138,7 @@ class DraftEditorContents extends React.Component {
         offsetKey,
         selection,
         tree: editorState.getBlockTree(key),
+        setDraftEditorSelectionCustom: this.props.setDraftEditorSelectionCustom,
       };
 
       const configForType = blockRenderMap.get(blockType);

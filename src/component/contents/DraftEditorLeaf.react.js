@@ -103,7 +103,19 @@ class DraftEditorLeaf extends React.Component {
       targetNode = child.firstChild;
     }
 
-    setDraftEditorSelection(selection, targetNode, blockKey, start, end);
+    let hasHandledSelection;
+    if (this.props.setDraftEditorSelectionCustom) {
+      hasHandledSelection = this.props.setDraftEditorSelectionCustom({
+        selection,
+        targetNode,
+        blockKey,
+        start,
+        end,
+      });
+    }
+    if (hasHandledSelection !== 'handled') {
+      setDraftEditorSelection(selection, targetNode, blockKey, start, end);
+    }
   }
 
   shouldComponentUpdate(nextProps: Props): boolean {

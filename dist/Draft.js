@@ -3553,7 +3553,8 @@ var Draft =
 	          styleSet: block.getInlineStyleAt(start),
 	          customStyleMap: _this2.props.customStyleMap,
 	          customStyleFn: _this2.props.customStyleFn,
-	          isLast: ii === lastLeafSet && jj === lastLeaf
+	          isLast: ii === lastLeafSet && jj === lastLeaf,
+	          setDraftEditorSelectionCustom: _this2.props.setDraftEditorSelectionCustom
 	        });
 	      }).toArray();
 
@@ -6282,7 +6283,8 @@ var Draft =
 	            customStyleMap: _extends({}, DefaultDraftInlineStyle, this.props.customStyleMap),
 	            customStyleFn: this.props.customStyleFn,
 	            editorKey: this._editorKey,
-	            editorState: this.props.editorState
+	            editorState: this.props.editorState,
+	            setDraftEditorSelectionCustom: this.props.setDraftEditorSelectionCustom
 	          })
 	        )
 	      )
@@ -6826,7 +6828,8 @@ var Draft =
 	        key: key,
 	        offsetKey: offsetKey,
 	        selection: selection,
-	        tree: editorState.getBlockTree(key)
+	        tree: editorState.getBlockTree(key),
+	        setDraftEditorSelectionCustom: this.props.setDraftEditorSelectionCustom
 	      };
 
 	      var configForType = blockRenderMap.get(blockType);
@@ -7198,7 +7201,19 @@ var Draft =
 	      targetNode = child.firstChild;
 	    }
 
-	    setDraftEditorSelection(selection, targetNode, blockKey, start, end);
+	    var hasHandledSelection = void 0;
+	    if (this.props.setDraftEditorSelectionCustom) {
+	      hasHandledSelection = this.props.setDraftEditorSelectionCustom({
+	        selection: selection,
+	        targetNode: targetNode,
+	        blockKey: blockKey,
+	        start: start,
+	        end: end
+	      });
+	    }
+	    if (hasHandledSelection !== 'handled') {
+	      setDraftEditorSelection(selection, targetNode, blockKey, start, end);
+	    }
 	  };
 
 	  DraftEditorLeaf.prototype.shouldComponentUpdate = function shouldComponentUpdate(nextProps) {
