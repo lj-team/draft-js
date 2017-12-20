@@ -283,6 +283,8 @@ class DraftEditor extends React.Component {
               customStyleFn={this.props.customStyleFn}
               editorKey={this._editorKey}
               editorState={this.props.editorState}
+              handleEditOnSelect={this.props.handleEditOnSelect}
+              adjustParsedDocumentSelection={this.props.adjustParsedDocumentSelection}
               setDraftEditorSelectionCustom={this.props.setDraftEditorSelectionCustom}
             />
           </div>

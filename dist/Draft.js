@@ -6284,6 +6284,8 @@ var Draft =
 	            customStyleFn: this.props.customStyleFn,
 	            editorKey: this._editorKey,
 	            editorState: this.props.editorState,
+	            handleEditOnSelect: this.props.handleEditOnSelect,
+	            adjustParsedDocumentSelection: this.props.adjustParsedDocumentSelection,
 	            setDraftEditorSelectionCustom: this.props.setDraftEditorSelectionCustom
 	          })
 	        )
@@ -9418,12 +9420,23 @@ var Draft =
 	var getDraftEditorSelection = __webpack_require__(99);
 
 	function editOnSelect(editor) {
+	  if (editor.props.handleEditOnSelect) {
+	    var handleStatus = editor.props.handleEditOnSelect();
+	    if (handleStatus === 'handled') {
+	      return;
+	    }
+	  }
 	  if (editor._blockSelectEvents || editor._latestEditorState !== editor.props.editorState) {
 	    return;
 	  }
 
 	  var editorState = editor.props.editorState;
-	  var documentSelection = getDraftEditorSelection(editorState, ReactDOM.findDOMNode(editor.refs.editorContainer).firstChild);
+	  var editorNode = ReactDOM.findDOMNode(editor.refs.editorContainer).firstChild;
+	  var documentSelection = getDraftEditorSelection(editorState, editorNode);
+	  // Let end-user help Editor parse some `document` `selection`s
+	  if (editor.props.adjustParsedDocumentSelection) {
+	    documentSelection = editor.props.adjustParsedDocumentSelection(documentSelection, editorState, editorNode);
+	  }
 	  var updatedSelectionState = documentSelection.selectionState;
 
 	  if (updatedSelectionState !== editorState.getSelection()) {

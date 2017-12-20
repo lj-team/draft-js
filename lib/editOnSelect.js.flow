@@ -20,12 +20,23 @@ var getDraftEditorSelection = require('./getDraftEditorSelection');
 import type DraftEditor from './DraftEditor.react';
 
 function editOnSelect(editor: DraftEditor): void {
+  if (editor.props.handleEditOnSelect) {
+    const handleStatus = editor.props.handleEditOnSelect();
+    if (handleStatus === 'handled') {
+      return;
+    }
+  }
   if (editor._blockSelectEvents || editor._latestEditorState !== editor.props.editorState) {
     return;
   }
 
   var editorState = editor.props.editorState;
-  var documentSelection = getDraftEditorSelection(editorState, ReactDOM.findDOMNode(editor.refs.editorContainer).firstChild);
+  var editorNode = ReactDOM.findDOMNode(editor.refs.editorContainer).firstChild;
+  var documentSelection = getDraftEditorSelection(editorState, editorNode);
+  // Let end-user help Editor parse some `document` `selection`s
+  if (editor.props.adjustParsedDocumentSelection) {
+    documentSelection = editor.props.adjustParsedDocumentSelection(documentSelection, editorState, editorNode);
+  }
   var updatedSelectionState = documentSelection.selectionState;
 
   if (updatedSelectionState !== editorState.getSelection()) {
