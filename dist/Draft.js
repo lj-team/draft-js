@@ -6504,10 +6504,6 @@ var Draft =
 	var DraftModifier = __webpack_require__(4);
 	var EditorState = __webpack_require__(1);
 	var Keys = __webpack_require__(30);
-	var UserAgent = __webpack_require__(8);
-
-	var isAndroid = UserAgent.isPlatform('Android');
-	var isChrome = UserAgent.isBrowser('Chrome');
 
 	var getEntityKeyForSelection = __webpack_require__(27);
 	var isSelectionAtLeafStart = __webpack_require__(51);
@@ -6533,11 +6529,6 @@ var Draft =
 	var resolved = false;
 	var stillComposing = false;
 	var textInputData = '';
-	/**
-	 * New versions of mobile Chrome don't fire `textinput` (converted to `beforeinput`) event,
-	 * so we'll save data from `compositionend` event.
-	 */
-	var compositionTextData = '';
 
 	var DraftEditorCompositionHandler = {
 	  onBeforeInput: function onBeforeInput(editor, e) {
@@ -6566,28 +6557,9 @@ var Draft =
 	   * twice could break the DOM, we only use the first event. Example: Arabic
 	   * Google Input Tools on Windows 8.1 fires `compositionend` three times.
 	   */
-	  onCompositionEnd: function onCompositionEnd(editor, e) {
-	    var node = document.getSelection().anchorNode;
-	    var textContent = node.textContent;
-	    var offset = document.getSelection().anchorOffset;
-	    var documentSelection = document.getSelection();
-	    var inFrontOfWord = false;
-	    var letterBefore = textContent[offset - 1] && textContent[offset - 1] !== ' ';
-	    var letterAfter = textContent[offset] && textContent[offset] !== ' ';
-	    if (documentSelection.isCollapsed && !letterBefore && letterAfter) {
-	      inFrontOfWord = true;
-	    }
-	    if (inFrontOfWord && isAndroid && isChrome) {
-	      // This is an especially bug-prone case
-	      // for composition handling,
-	      // so try not to mess with browser's work here
-	      return;
-	    }
+	  onCompositionEnd: function onCompositionEnd(editor) {
 	    resolved = false;
 	    stillComposing = false;
-	    if (isAndroid && isChrome) {
-	      compositionTextData = e.data;
-	    }
 	    setTimeout(function () {
 	      if (!resolved) {
 	        DraftEditorCompositionHandler.resolveComposition(editor);
@@ -6648,11 +6620,8 @@ var Draft =
 	    }
 
 	    resolved = true;
-	    // If we're on a new mobile Chrome, `textInputData` may be empty here,
-	    // so `compositionTextData` from `compositionend` will be used.
-	    var composedChars = textInputData || compositionTextData;
+	    var composedChars = textInputData;
 	    textInputData = '';
-	    compositionTextData = '';
 
 	    var editorState = EditorState.set(editor._latestEditorState, {
 	      inCompositionMode: false
