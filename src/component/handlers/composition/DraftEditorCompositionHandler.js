@@ -45,6 +45,12 @@ let textInputData = '';
 
 var DraftEditorCompositionHandler = {
   onBeforeInput: function(editor: DraftEditor, e: SyntheticInputEvent): void {
+    if (editor.props.compositionHandler && editor.props.compositionHandler.onBeforeInput) {
+      const output = editor.props.compositionHandler.onBeforeInput(editor, e);
+      if (output === 'handled') {
+        return;
+      }
+    }
     textInputData = (textInputData || '') + e.data;
   },
 
@@ -52,7 +58,13 @@ var DraftEditorCompositionHandler = {
    * A `compositionstart` event has fired while we're still in composition
    * mode. Continue the current composition session to prevent a re-render.
    */
-  onCompositionStart: function(editor: DraftEditor): void {
+  onCompositionStart: function(editor: DraftEditor, e: SyntheticInputEvent): void {
+    if (editor.props.compositionHandler && editor.props.compositionHandler.onCompositionStart) {
+      const output = editor.props.compositionHandler.onCompositionStart(editor, e);
+      if (output === 'handled') {
+        return;
+      }
+    }
     stillComposing = true;
   },
 
@@ -70,7 +82,13 @@ var DraftEditorCompositionHandler = {
    * twice could break the DOM, we only use the first event. Example: Arabic
    * Google Input Tools on Windows 8.1 fires `compositionend` three times.
    */
-  onCompositionEnd: function(editor: DraftEditor): void {
+  onCompositionEnd: function(editor: DraftEditor, e: SyntheticInputEvent): void {
+    if (editor.props.compositionHandler && editor.props.compositionHandler.onCompositionEnd) {
+      const output = editor.props.compositionHandler.onCompositionEnd(editor, e);
+      if (output === 'handled') {
+        return;
+      }
+    }
     resolved = false;
     stillComposing = false;
     setTimeout(() => {
@@ -86,6 +104,12 @@ var DraftEditorCompositionHandler = {
    * doesn't move, otherwise it will jump back noticeably on re-render.
    */
   onKeyDown: function(editor: DraftEditor, e: SyntheticKeyboardEvent): void {
+    if (editor.props.compositionHandler && editor.props.compositionHandler.onKeyDown) {
+      const output = editor.props.compositionHandler.onKeyDown(editor, e);
+      if (output === 'handled') {
+        return;
+      }
+    }
     if (!stillComposing) {
       // If a keydown event is received after compositionend but before the
       // 20ms timer expires (ex: type option-E then backspace, or type A then
@@ -107,6 +131,12 @@ var DraftEditorCompositionHandler = {
    * to be committed while preventing the extra characters.
    */
   onKeyPress: function(editor: DraftEditor, e: SyntheticKeyboardEvent): void {
+    if (editor.props.compositionHandler && editor.props.compositionHandler.onKeyPress) {
+      const output = editor.props.compositionHandler.onKeyPress(editor, e);
+      if (output === 'handled') {
+        return;
+      }
+    }
     if (e.which === Keys.RETURN) {
       e.preventDefault();
     }
