@@ -21,6 +21,12 @@ import type DraftEditor from 'DraftEditor.react';
  * allows handling composition input and disables other edit behavior.
  */
 function editOnCompositionStart(editor: DraftEditor, e: SyntheticEvent): void {
+  if (editor.props.handleCompositionStart) {
+    const output = editor.props.handleCompositionStart(editor, e);
+    if (output === 'handled') {
+      return;
+    }
+  }
   editor.setMode('composite');
   editor.update(
     EditorState.set(editor._latestEditorState, {inCompositionMode: true}),

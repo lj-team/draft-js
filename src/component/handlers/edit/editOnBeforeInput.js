@@ -96,9 +96,8 @@ function editOnBeforeInput(editor: DraftEditor, e: SyntheticInputEvent): void {
   // start of the block.
   if (
     editor.props.handleBeforeInput &&
-    isEventHandled(editor.props.handleBeforeInput(chars))
+    isEventHandled(editor.props.handleBeforeInput(chars, e, editor))
   ) {
-    e.preventDefault();
     return;
   }
 

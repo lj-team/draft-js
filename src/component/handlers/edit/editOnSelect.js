@@ -19,9 +19,9 @@ var getDraftEditorSelection = require('getDraftEditorSelection');
 
 import type DraftEditor from 'DraftEditor.react';
 
-function editOnSelect(editor: DraftEditor): void {
+function editOnSelect(editor: DraftEditor, e: SyntheticEvent): void {
   if (editor.props.handleEditOnSelect) {
-    const handleStatus = editor.props.handleEditOnSelect();
+    const handleStatus = editor.props.handleEditOnSelect(editor, e);
     if (handleStatus === 'handled') {
       return;
     }

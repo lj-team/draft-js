@@ -38,7 +38,13 @@ var DOUBLE_NEWLINE = '\n\n';
  * when an `input` change leads to a DOM/model mismatch, the change should be
  * due to a spellcheck change, and we can incorporate it into our model.
  */
-function editOnInput(editor: DraftEditor): void {
+function editOnInput(editor: DraftEditor, e: SyntheticEvent): void {
+  if (editor.props.handleInput) {
+    const output = editor.props.handleInput(editor, e);
+    if (output === 'handled') {
+      return;
+    }
+  }
   if (editor._pendingStateFromBeforeInput !== undefined) {
     editor.update(editor._pendingStateFromBeforeInput);
     editor._pendingStateFromBeforeInput = undefined;

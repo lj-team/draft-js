@@ -84,6 +84,12 @@ function onKeyCommand(
  * component may provide a custom mapping via the `keyBindingFn` prop.
  */
 function editOnKeyDown(editor: DraftEditor, e: SyntheticKeyboardEvent): void {
+  if (editor.props.handleKeyDown) {
+    const output = editor.props.handleKeyDown(editor, e);
+    if (output === 'handled') {
+      return;
+    }
+  }
   var keyCode = e.which;
   var editorState = editor._latestEditorState;
 

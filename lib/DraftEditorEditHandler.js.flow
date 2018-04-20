@@ -15,6 +15,7 @@
 const onBeforeInput = require('./editOnBeforeInput');
 const onBlur = require('./editOnBlur');
 const onCompositionStart = require('./editOnCompositionStart');
+const onCompositionEnd = require('./editOnCompositionEnd');
 const onCopy = require('./editOnCopy');
 const onCut = require('./editOnCut');
 const onDragOver = require('./editOnDragOver');
@@ -29,6 +30,7 @@ const DraftEditorEditHandler = {
   onBeforeInput,
   onBlur,
   onCompositionStart,
+  onCompositionEnd,
   onCopy,
   onCut,
   onDragOver,

@@ -36,6 +36,8 @@ const convertFromRawToDraftState = require('convertFromRawToDraftState');
 const generateRandomKey = require('generateRandomKey');
 const getDefaultKeyBinding = require('getDefaultKeyBinding');
 const getVisibleSelectionRect = require('getVisibleSelectionRect');
+const keyCommandPlainBackspace = require('keyCommandPlainBackspace');
+
 
 const DraftPublic = {
   Editor: DraftEditor,
@@ -66,6 +68,7 @@ const DraftPublic = {
   genKey: generateRandomKey,
   getDefaultKeyBinding,
   getVisibleSelectionRect,
+  keyCommandPlainBackspace,
 };
 
 module.exports = DraftPublic;
