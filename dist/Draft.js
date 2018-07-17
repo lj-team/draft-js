@@ -74,7 +74,7 @@ var Draft =
 	var CompositeDraftDecorator = __webpack_require__(62);
 	var ContentBlock = __webpack_require__(9);
 	var ContentState = __webpack_require__(18);
-	var DefaultDraftBlockRenderMap = __webpack_require__(24);
+	var DefaultDraftBlockRenderMap = __webpack_require__(25);
 	var DefaultDraftInlineStyle = __webpack_require__(36);
 	var DraftEditor = __webpack_require__(64);
 	var DraftEditorBlock = __webpack_require__(37);
@@ -82,7 +82,7 @@ var Draft =
 	var DraftModifier = __webpack_require__(4);
 	var DraftEntityInstance = __webpack_require__(38);
 	var EditorState = __webpack_require__(1);
-	var KeyBindingUtil = __webpack_require__(25);
+	var KeyBindingUtil = __webpack_require__(26);
 	var RichTextEditorUtil = __webpack_require__(75);
 	var SelectionState = __webpack_require__(13);
 
@@ -93,6 +93,7 @@ var Draft =
 	var getDefaultKeyBinding = __webpack_require__(42);
 	var getVisibleSelectionRect = __webpack_require__(104);
 	var keyCommandPlainBackspace = __webpack_require__(53);
+	var getEntityKeyForSelection = __webpack_require__(23);
 	var getDraftEditorSelection = __webpack_require__(43);
 
 	var DraftPublic = {
@@ -125,7 +126,8 @@ var Draft =
 	  getDefaultKeyBinding: getDefaultKeyBinding,
 	  getVisibleSelectionRect: getVisibleSelectionRect,
 	  keyCommandPlainBackspace: keyCommandPlainBackspace,
-	  getDraftEditorSelection: getDraftEditorSelection
+	  getDraftEditorSelection: getDraftEditorSelection,
+	  getEntityKeyForSelection: getEntityKeyForSelection
 	};
 
 	module.exports = DraftPublic;
@@ -2626,6 +2628,66 @@ var Draft =
 	 * LICENSE file in the root directory of this source tree. An additional grant
 	 * of patent rights can be found in the PATENTS file in the same directory.
 	 *
+	 * @providesModule getEntityKeyForSelection
+	 * @typechecks
+	 * 
+	 */
+
+	'use strict';
+
+	/**
+	 * Return the entity key that should be used when inserting text for the
+	 * specified target selection, only if the entity is `MUTABLE`. `IMMUTABLE`
+	 * and `SEGMENTED` entities should not be used for insertion behavior.
+	 */
+	function getEntityKeyForSelection(contentState, targetSelection) {
+	  var entityKey;
+
+	  if (targetSelection.isCollapsed()) {
+	    var key = targetSelection.getAnchorKey();
+	    var offset = targetSelection.getAnchorOffset();
+	    if (offset > 0) {
+	      entityKey = contentState.getBlockForKey(key).getEntityAt(offset - 1);
+	      return filterKey(contentState.getEntityMap(), entityKey);
+	    }
+	    return null;
+	  }
+
+	  var startKey = targetSelection.getStartKey();
+	  var startOffset = targetSelection.getStartOffset();
+	  var startBlock = contentState.getBlockForKey(startKey);
+
+	  entityKey = startOffset === startBlock.getLength() ? null : startBlock.getEntityAt(startOffset);
+
+	  return filterKey(contentState.getEntityMap(), entityKey);
+	}
+
+	/**
+	 * Determine whether an entity key corresponds to a `MUTABLE` entity. If so,
+	 * return it. If not, return null.
+	 */
+	function filterKey(entityMap, entityKey) {
+	  if (entityKey) {
+	    var entity = entityMap.__get(entityKey);
+	    return entity.getMutability() === 'MUTABLE' ? entityKey : null;
+	  }
+	  return null;
+	}
+
+	module.exports = getEntityKeyForSelection;
+
+/***/ }),
+/* 24 */
+/***/ (function(module, exports) {
+
+	/**
+	 * Copyright (c) 2013-present, Facebook, Inc.
+	 * All rights reserved.
+	 *
+	 * This source code is licensed under the BSD-style license found in the
+	 * LICENSE file in the root directory of this source tree. An additional grant
+	 * of patent rights can be found in the PATENTS file in the same directory.
+	 *
 	 * @providesModule isEventHandled
 	 * @typechecks
 	 * 
@@ -2644,7 +2706,7 @@ var Draft =
 	module.exports = isEventHandled;
 
 /***/ }),
-/* 24 */
+/* 25 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/**
@@ -2718,7 +2780,7 @@ var Draft =
 	module.exports = DefaultDraftBlockRenderMap;
 
 /***/ }),
-/* 25 */
+/* 26 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/**
@@ -2762,7 +2824,7 @@ var Draft =
 	module.exports = KeyBindingUtil;
 
 /***/ }),
-/* 26 */
+/* 27 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	/**
@@ -2798,66 +2860,6 @@ var Draft =
 	}
 
 	module.exports = findAncestorOffsetKey;
-
-/***/ }),
-/* 27 */
-/***/ (function(module, exports) {
-
-	/**
-	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
-	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
-	 *
-	 * @providesModule getEntityKeyForSelection
-	 * @typechecks
-	 * 
-	 */
-
-	'use strict';
-
-	/**
-	 * Return the entity key that should be used when inserting text for the
-	 * specified target selection, only if the entity is `MUTABLE`. `IMMUTABLE`
-	 * and `SEGMENTED` entities should not be used for insertion behavior.
-	 */
-	function getEntityKeyForSelection(contentState, targetSelection) {
-	  var entityKey;
-
-	  if (targetSelection.isCollapsed()) {
-	    var key = targetSelection.getAnchorKey();
-	    var offset = targetSelection.getAnchorOffset();
-	    if (offset > 0) {
-	      entityKey = contentState.getBlockForKey(key).getEntityAt(offset - 1);
-	      return filterKey(contentState.getEntityMap(), entityKey);
-	    }
-	    return null;
-	  }
-
-	  var startKey = targetSelection.getStartKey();
-	  var startOffset = targetSelection.getStartOffset();
-	  var startBlock = contentState.getBlockForKey(startKey);
-
-	  entityKey = startOffset === startBlock.getLength() ? null : startBlock.getEntityAt(startOffset);
-
-	  return filterKey(contentState.getEntityMap(), entityKey);
-	}
-
-	/**
-	 * Determine whether an entity key corresponds to a `MUTABLE` entity. If so,
-	 * return it. If not, return null.
-	 */
-	function filterKey(entityMap, entityKey) {
-	  if (entityKey) {
-	    var entity = entityMap.__get(entityKey);
-	    return entity.getMutability() === 'MUTABLE' ? entityKey : null;
-	  }
-	  return null;
-	}
-
-	module.exports = getEntityKeyForSelection;
 
 /***/ }),
 /* 28 */
@@ -3813,7 +3815,7 @@ var Draft =
 
 	var CharacterMetadata = __webpack_require__(6);
 	var ContentBlock = __webpack_require__(9);
-	var DefaultDraftBlockRenderMap = __webpack_require__(24);
+	var DefaultDraftBlockRenderMap = __webpack_require__(25);
 	var DraftEntity = __webpack_require__(19);
 	var Immutable = __webpack_require__(2);
 	var URI = __webpack_require__(123);
@@ -4326,7 +4328,7 @@ var Draft =
 
 	'use strict';
 
-	var KeyBindingUtil = __webpack_require__(25);
+	var KeyBindingUtil = __webpack_require__(26);
 	var Keys = __webpack_require__(30);
 	var UserAgent = __webpack_require__(8);
 
@@ -4497,7 +4499,7 @@ var Draft =
 
 	'use strict';
 
-	var findAncestorOffsetKey = __webpack_require__(26);
+	var findAncestorOffsetKey = __webpack_require__(27);
 	var getSelectionOffsetKeyForNode = __webpack_require__(48);
 	var getUpdatedSelectionState = __webpack_require__(50);
 	var invariant = __webpack_require__(3);
@@ -6166,7 +6168,7 @@ var Draft =
 
 	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-	var DefaultDraftBlockRenderMap = __webpack_require__(24);
+	var DefaultDraftBlockRenderMap = __webpack_require__(25);
 	var DefaultDraftInlineStyle = __webpack_require__(36);
 	var DraftEditorCompositionHandler = __webpack_require__(65);
 	var DraftEditorContents = __webpack_require__(66);
@@ -6600,7 +6602,7 @@ var Draft =
 	var EditorState = __webpack_require__(1);
 	var Keys = __webpack_require__(30);
 
-	var getEntityKeyForSelection = __webpack_require__(27);
+	var getEntityKeyForSelection = __webpack_require__(23);
 	var isSelectionAtLeafStart = __webpack_require__(52);
 
 	/**
@@ -7024,12 +7026,12 @@ var Draft =
 	var DraftModifier = __webpack_require__(4);
 	var EditorState = __webpack_require__(1);
 
-	var findAncestorOffsetKey = __webpack_require__(26);
+	var findAncestorOffsetKey = __webpack_require__(27);
 	var getTextContentFromFiles = __webpack_require__(49);
 	var getUpdatedSelectionState = __webpack_require__(50);
 	var nullthrows = __webpack_require__(5);
 
-	var isEventHandled = __webpack_require__(23);
+	var isEventHandled = __webpack_require__(24);
 
 	/**
 	 * Get a SelectionState for the supplied mouse event.
@@ -8570,12 +8572,12 @@ var Draft =
 	var EditorState = __webpack_require__(1);
 	var UserAgent = __webpack_require__(8);
 
-	var getEntityKeyForSelection = __webpack_require__(27);
+	var getEntityKeyForSelection = __webpack_require__(23);
 	var isSelectionAtLeafStart = __webpack_require__(52);
 	var nullthrows = __webpack_require__(5);
 	var setImmediate = __webpack_require__(141);
 
-	var isEventHandled = __webpack_require__(23);
+	var isEventHandled = __webpack_require__(24);
 
 	// When nothing is focused, Firefox regards two characters, `'` and `/`, as
 	// commands that should open and focus the "quickfind" search bar. This should
@@ -9026,7 +9028,7 @@ var Draft =
 	var EditorState = __webpack_require__(1);
 	var UserAgent = __webpack_require__(8);
 
-	var findAncestorOffsetKey = __webpack_require__(26);
+	var findAncestorOffsetKey = __webpack_require__(27);
 	var nullthrows = __webpack_require__(5);
 
 	var isGecko = UserAgent.isEngine('Gecko');
@@ -9192,7 +9194,7 @@ var Draft =
 
 	var DraftModifier = __webpack_require__(4);
 	var EditorState = __webpack_require__(1);
-	var KeyBindingUtil = __webpack_require__(25);
+	var KeyBindingUtil = __webpack_require__(26);
 	var Keys = __webpack_require__(30);
 	var SecondaryClipboard = __webpack_require__(76);
 	var UserAgent = __webpack_require__(8);
@@ -9208,7 +9210,7 @@ var Draft =
 	var keyCommandTransposeCharacters = __webpack_require__(114);
 	var keyCommandUndo = __webpack_require__(115);
 
-	var isEventHandled = __webpack_require__(23);
+	var isEventHandled = __webpack_require__(24);
 
 	var isOptionKeyCommand = KeyBindingUtil.isOptionKeyCommand;
 
@@ -9356,9 +9358,9 @@ var Draft =
 	var DraftPasteProcessor = __webpack_require__(73);
 	var EditorState = __webpack_require__(1);
 
-	var getEntityKeyForSelection = __webpack_require__(27);
+	var getEntityKeyForSelection = __webpack_require__(23);
 	var getTextContentFromFiles = __webpack_require__(49);
-	var isEventHandled = __webpack_require__(23);
+	var isEventHandled = __webpack_require__(24);
 	var splitTextIntoTextBlocks = __webpack_require__(120);
 
 	/**
