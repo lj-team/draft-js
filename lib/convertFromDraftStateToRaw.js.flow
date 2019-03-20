@@ -14,8 +14,15 @@
 
 var DraftStringKey = require('./DraftStringKey');
 
+var Immutable = require('immutable');
+
 var encodeEntityRanges = require('./encodeEntityRanges');
 var encodeInlineStyleRanges = require('./encodeInlineStyleRanges');
+
+var {
+  List,
+  OrderedMap
+} = Immutable;
 
 import type ContentState from './ContentState';
 import type { RawDraftContentState } from './RawDraftContentState';
@@ -25,7 +32,7 @@ function convertFromDraftStateToRaw(contentState: ContentState): RawDraftContent
   var entityStorageMap = {};
   var rawBlocks = [];
 
-  contentState.getBlockMap().forEach((block, blockKey) => {
+  const processBlock = (block, blockKey) => {
     block.findEntityRanges(character => character.getEntity() !== null, start => {
       // Stringify to maintain order of otherwise numeric keys.
       var stringifiedEntityKey = DraftStringKey.stringify(block.getEntityAt(start));
@@ -34,15 +41,37 @@ function convertFromDraftStateToRaw(contentState: ContentState): RawDraftContent
       }
     });
 
-    rawBlocks.push({
+    let markers = [];
+    if (block.markers && block.markers.size) {
+      markers = block.getMarkers();
+    }
+
+    let childBlockMap = [];
+    if (block.childBlockMap && block.childBlockMap.size) {
+      childBlockMap = [];
+      block.childBlockMap.forEach((block, blockKey) => {
+        const processedBlock = processBlock(block, blockKey);
+        childBlockMap.push(processedBlock);
+      });
+    }
+
+    return {
       key: blockKey,
+      parentKey: block.getParentKey(),
       text: block.getText(),
       type: block.getType(),
       depth: block.getDepth(),
       inlineStyleRanges: encodeInlineStyleRanges(block),
       entityRanges: encodeEntityRanges(block, entityStorageMap),
-      data: block.getData().toObject()
-    });
+      data: block.getData().toObject(),
+      markers: markers,
+      childBlockMap: childBlockMap
+    };
+  };
+
+  contentState.getBlockMap().forEach((block, blockKey) => {
+    const processedBlock = processBlock(block, blockKey);
+    rawBlocks.push(processedBlock);
   });
 
   // Flip storage map so that our storage keys map to global

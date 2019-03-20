@@ -110,17 +110,13 @@ class DraftEditorContents extends React.Component {
     let currentDepth = null;
     let lastWrapperTemplate = null;
 
-    for (let ii = 0; ii < blocksAsArray.length; ii++) {
-      const block = blocksAsArray[ii];
+    const buildPropsForBlock = (block) => {
       const key = block.getKey();
-      const blockType = block.getType();
 
       const customRenderer = blockRendererFn(block);
-      let CustomComponent, customProps, customEditable;
+      let customProps;
       if (customRenderer) {
-        CustomComponent = customRenderer.component;
         customProps = customRenderer.props;
-        customEditable = customRenderer.editable;
       }
 
       const direction = directionMap.get(key);
@@ -140,6 +136,32 @@ class DraftEditorContents extends React.Component {
         tree: editorState.getBlockTree(key),
         setDraftEditorSelectionCustom: this.props.setDraftEditorSelectionCustom,
       };
+
+      return componentProps;
+    };
+
+    for (let ii = 0; ii < blocksAsArray.length; ii++) {
+      const block = blocksAsArray[ii];
+      const key = block.getKey();
+      const blockType = block.getType();
+
+      const customRenderer = blockRendererFn(block);
+      let CustomComponent, customEditable;
+      if (customRenderer) {
+        CustomComponent = customRenderer.component;
+        customEditable = customRenderer.editable;
+      }
+
+      const direction = directionMap.get(key);
+      const offsetKey = DraftOffsetKey.encode(key, 0, 0);
+
+      const componentProps = buildPropsForBlock(block);
+
+      if ((block.getChildBlockMap() || {}).size) {
+        componentProps.childBlocksProps = block.getChildBlockMap().map(
+          childBlock => buildPropsForBlock(childBlock)
+        );
+      }
 
       const configForType = blockRenderMap.get(blockType);
       const wrapperTemplate = configForType.wrapper;

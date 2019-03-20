@@ -28,7 +28,12 @@ import type DraftEntityInstance from 'DraftEntityInstance';
 import type {DraftEntityMutability} from 'DraftEntityMutability';
 import type {DraftEntityType} from 'DraftEntityType';
 
-const {List, Record, Repeat} = Immutable;
+const {
+  List,
+  Record,
+  Repeat,
+  OrderedMap,
+} = Immutable;
 
 const defaultRecord: {
   entityMap: ?any,
@@ -63,9 +68,61 @@ class ContentState extends ContentStateRecord {
     return this.get('selectionAfter');
   }
 
+  getFlatBlockMap(key: string): BlockMap {
+    let flatBlockMap = this.getBlockMap();
+    this.getBlockMap().forEach(block => {
+      flatBlockMap = flatBlockMap.merge(
+        (block.getChildBlockMap() || OrderedMap()).toSeq()
+      );
+    });
+    return flatBlockMap;
+  }
+
+  applyToAllBlockMaps(op: BlockMap => BlockMap): ContentState {
+    let newGeneralBlockMap = op(this.getBlockMap()).map((block, key) => {
+      const childBlockMap = block.getChildBlockMap();
+      if (!childBlockMap) {
+        return block;
+      }
+      return block.set('childBlockMap', op(childBlockMap));
+    });
+    return new ContentState({
+      blockMap: newGeneralBlockMap,
+      entityMap: this.entityMap,
+      selectionBefore: this.selectionBefore,
+      selectionAfter: this.selectionAfter,
+    });
+  }
+
   getBlockForKey(key: string): ContentBlock {
-    var block: ContentBlock = this.getBlockMap().get(key);
+    let flatBlockMap = this.getFlatBlockMap();
+
+    var block: ContentBlock = flatBlockMap.get(key);
     return block;
+  }
+
+  changeBlockForKey(key: string, replacer: ContentBlock): ContentState {
+    const initialBlockMap = this.getBlockMap();
+    const newBlockMap = initialBlockMap.map(block => {
+      if (block.getKey() === key) {
+        return replacer;
+      }
+      const childBlockMap = block.getChildBlockMap();
+      if (!childBlockMap || !childBlockMap.size) {
+        return block;
+      }
+      const adjustedChildBlockMap = childBlockMap.map(childBlock => {
+        if (childBlock.getKey() === key) {
+          return replacer;
+        }
+        return childBlock;
+      });
+      return block.set('childBlockMap', adjustedChildBlockMap);
+    });
+    if (initialBlockMap === newBlockMap) {
+      return initialBlockMap;
+    }
+    return this.set('blockMap', newBlockMap);
   }
 
   getKeyBefore(key: string): ?string {

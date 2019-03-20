@@ -163,6 +163,7 @@ var Draft =
 	var SelectionState = __webpack_require__(13);
 
 	var OrderedSet = Immutable.OrderedSet,
+	    OrderedMap = Immutable.OrderedMap,
 	    Record = Immutable.Record,
 	    Stack = Immutable.Stack;
 
@@ -594,7 +595,11 @@ var Draft =
 	 * Returns an OrderedMap that maps all available ContentBlock objects.
 	 */
 	function generateNewTreeMap(contentState, decorator) {
-	  return contentState.getBlockMap().map(function (block) {
+	  var allLevelBlocks = contentState.getBlockMap().flatMap(function (block, key) {
+	    return OrderedMap([[key, block]]).merge(block.getChildBlockMap());
+	  });
+
+	  return allLevelBlocks.map(function (block) {
 	    return BlockTree.generate(contentState, block, decorator);
 	  }).toOrderedMap();
 	}
@@ -608,7 +613,13 @@ var Draft =
 	  var contentState = editorState.getCurrentContent().set('entityMap', newEntityMap);
 	  var prevBlockMap = contentState.getBlockMap();
 	  var prevTreeMap = editorState.getImmutable().get('treeMap');
-	  return prevTreeMap.merge(newBlockMap.toSeq().filter(function (block, key) {
+
+	  var newSeqWithChildBlocks = newBlockMap.toSeq();
+	  newBlockMap.forEach(function (block) {
+	    newSeqWithChildBlocks = newSeqWithChildBlocks.concat((block.getChildBlockMap() || OrderedMap()).toSeq());
+	  });
+
+	  return prevTreeMap.merge(newSeqWithChildBlocks.filter(function (block, key) {
 	    return block !== prevBlockMap.get(key);
 	  }).map(function (block) {
 	    return BlockTree.generate(contentState, block, decorator);
@@ -711,11 +722,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 */
 
@@ -923,11 +932,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * 
 	 */
@@ -1097,11 +1104,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 */
 
@@ -1368,18 +1373,22 @@ var Draft =
 	var List = Immutable.List,
 	    Map = Immutable.Map,
 	    OrderedSet = Immutable.OrderedSet,
-	    Record = Immutable.Record;
+	    Record = Immutable.Record,
+	    OrderedMap = Immutable.OrderedMap;
 
 
 	var EMPTY_SET = OrderedSet();
 
 	var defaultRecord = {
 	  key: '',
+	  parentKey: '',
 	  type: 'unstyled',
 	  text: '',
 	  characterList: List(),
 	  depth: 0,
-	  data: Map()
+	  data: Map(),
+	  childBlockMap: OrderedMap(),
+	  markers: List()
 	};
 
 	var ContentBlockRecord = Record(defaultRecord);
@@ -1395,6 +1404,10 @@ var Draft =
 
 	  ContentBlock.prototype.getKey = function getKey() {
 	    return this.get('key');
+	  };
+
+	  ContentBlock.prototype.getParentKey = function getParentKey() {
+	    return this.get('parentKey');
 	  };
 
 	  ContentBlock.prototype.getType = function getType() {
@@ -1419,6 +1432,14 @@ var Draft =
 
 	  ContentBlock.prototype.getData = function getData() {
 	    return this.get('data');
+	  };
+
+	  ContentBlock.prototype.getChildBlockMap = function getChildBlockMap() {
+	    return this.get('childBlockMap');
+	  };
+
+	  ContentBlock.prototype.getMarkers = function getMarkers() {
+	    return this.get('markers');
 	  };
 
 	  ContentBlock.prototype.getInlineStyleAt = function getInlineStyleAt(offset) {
@@ -1468,11 +1489,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * @typechecks
 	 */
@@ -2010,11 +2029,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 */
 
@@ -2091,7 +2108,8 @@ var Draft =
 
 	var List = Immutable.List,
 	    Record = Immutable.Record,
-	    Repeat = Immutable.Repeat;
+	    Repeat = Immutable.Repeat,
+	    OrderedMap = Immutable.OrderedMap;
 
 
 	var defaultRecord = {
@@ -2129,9 +2147,59 @@ var Draft =
 	    return this.get('selectionAfter');
 	  };
 
+	  ContentState.prototype.getFlatBlockMap = function getFlatBlockMap(key) {
+	    var flatBlockMap = this.getBlockMap();
+	    this.getBlockMap().forEach(function (block) {
+	      flatBlockMap = flatBlockMap.merge((block.getChildBlockMap() || OrderedMap()).toSeq());
+	    });
+	    return flatBlockMap;
+	  };
+
+	  ContentState.prototype.applyToAllBlockMaps = function applyToAllBlockMaps(op) {
+	    var newGeneralBlockMap = op(this.getBlockMap()).map(function (block, key) {
+	      var childBlockMap = block.getChildBlockMap();
+	      if (!childBlockMap) {
+	        return block;
+	      }
+	      return block.set('childBlockMap', op(childBlockMap));
+	    });
+	    return new ContentState({
+	      blockMap: newGeneralBlockMap,
+	      entityMap: this.entityMap,
+	      selectionBefore: this.selectionBefore,
+	      selectionAfter: this.selectionAfter
+	    });
+	  };
+
 	  ContentState.prototype.getBlockForKey = function getBlockForKey(key) {
-	    var block = this.getBlockMap().get(key);
+	    var flatBlockMap = this.getFlatBlockMap();
+
+	    var block = flatBlockMap.get(key);
 	    return block;
+	  };
+
+	  ContentState.prototype.changeBlockForKey = function changeBlockForKey(key, replacer) {
+	    var initialBlockMap = this.getBlockMap();
+	    var newBlockMap = initialBlockMap.map(function (block) {
+	      if (block.getKey() === key) {
+	        return replacer;
+	      }
+	      var childBlockMap = block.getChildBlockMap();
+	      if (!childBlockMap || !childBlockMap.size) {
+	        return block;
+	      }
+	      var adjustedChildBlockMap = childBlockMap.map(function (childBlock) {
+	        if (childBlock.getKey() === key) {
+	          return replacer;
+	        }
+	        return childBlock;
+	      });
+	      return block.set('childBlockMap', adjustedChildBlockMap);
+	    });
+	    if (initialBlockMap === newBlockMap) {
+	      return initialBlockMap;
+	    }
+	    return this.set('blockMap', newBlockMap);
 	  };
 
 	  ContentState.prototype.getKeyBefore = function getKeyBefore(key) {
@@ -2952,11 +3020,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 */
 
@@ -2993,11 +3059,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * @typechecks
 	 */
@@ -3060,11 +3124,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * @typechecks
 	 * 
@@ -3175,11 +3237,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * 
 	 */
@@ -3216,11 +3276,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * @typechecks
 	 */
@@ -5229,7 +5287,7 @@ var Draft =
 
 	  var startKey = selectionState.getStartKey();
 	  var startOffset = selectionState.getStartOffset();
-	  var startBlock = blockMap.get(startKey);
+	  var startBlock = contentState.getBlockForKey(startKey);
 	  var updatedStart = removeForBlock(entityMap, startBlock, startOffset);
 
 	  if (updatedStart !== startBlock) {
@@ -5238,7 +5296,7 @@ var Draft =
 
 	  var endKey = selectionState.getEndKey();
 	  var endOffset = selectionState.getEndOffset();
-	  var endBlock = blockMap.get(endKey);
+	  var endBlock = contentState.getBlockForKey(endKey);
 	  if (startKey === endKey) {
 	    endBlock = updatedStart;
 	  }
@@ -5313,11 +5371,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * @typechecks
 	 */
@@ -5537,11 +5593,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 */
 
@@ -5625,11 +5679,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * @typechecks
 	 * 
@@ -5788,11 +5840,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * 
 	 */
@@ -5832,11 +5882,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * @typechecks
 	 */
@@ -6096,41 +6144,46 @@ var Draft =
 	};
 
 	function modifyInlineStyle(contentState, selectionState, inlineStyle, addOrRemove) {
-	  var blockMap = contentState.getBlockMap();
 	  var startKey = selectionState.getStartKey();
 	  var startOffset = selectionState.getStartOffset();
 	  var endKey = selectionState.getEndKey();
 	  var endOffset = selectionState.getEndOffset();
 
-	  var newBlocks = blockMap.skipUntil(function (_, k) {
-	    return k === startKey;
-	  }).takeUntil(function (_, k) {
-	    return k === endKey;
-	  }).concat(Map([[endKey, blockMap.get(endKey)]])).map(function (block, blockKey) {
-	    var sliceStart;
-	    var sliceEnd;
+	  var blockMapOp = function blockMapOp(givenBlockMap) {
+	    var newBlocks = givenBlockMap.skipUntil(function (_, k) {
+	      return k === startKey;
+	    }).takeUntil(function (_, k) {
+	      return k === endKey;
+	    }).concat(Map([[endKey, givenBlockMap.get(endKey)]])).filter(function (a) {
+	      return a;
+	    }).map(function (block, blockKey) {
+	      var newBlock = block;
+	      var sliceStart;
+	      var sliceEnd;
 
-	    if (startKey === endKey) {
-	      sliceStart = startOffset;
-	      sliceEnd = endOffset;
-	    } else {
-	      sliceStart = blockKey === startKey ? startOffset : 0;
-	      sliceEnd = blockKey === endKey ? endOffset : block.getLength();
-	    }
+	      if (startKey === endKey) {
+	        sliceStart = startOffset;
+	        sliceEnd = endOffset;
+	      } else {
+	        sliceStart = blockKey === startKey ? startOffset : 0;
+	        sliceEnd = blockKey === endKey ? endOffset : block.getLength();
+	      }
 
-	    var chars = block.getCharacterList();
-	    var current;
-	    while (sliceStart < sliceEnd) {
-	      current = chars.get(sliceStart);
-	      chars = chars.set(sliceStart, addOrRemove ? CharacterMetadata.applyStyle(current, inlineStyle) : CharacterMetadata.removeStyle(current, inlineStyle));
-	      sliceStart++;
-	    }
+	      var chars = block.getCharacterList();
+	      var current;
+	      while (sliceStart < sliceEnd) {
+	        current = chars.get(sliceStart);
+	        chars = chars.set(sliceStart, addOrRemove ? CharacterMetadata.applyStyle(current, inlineStyle) : CharacterMetadata.removeStyle(current, inlineStyle));
+	        sliceStart++;
+	      }
+	      return newBlock.set('characterList', chars);
+	    });
+	    return givenBlockMap.merge(newBlocks);
+	  };
 
-	    return block.set('characterList', chars);
-	  });
+	  contentState = contentState.applyToAllBlockMaps(blockMapOp);
 
 	  return contentState.merge({
-	    blockMap: blockMap.merge(newBlocks),
 	    selectionBefore: selectionState,
 	    selectionAfter: selectionState
 	  });
@@ -6848,6 +6901,8 @@ var Draft =
 	  };
 
 	  DraftEditorContents.prototype.render = function render() {
+	    var _this2 = this;
+
 	    var _props = this.props,
 	        blockRenderMap = _props.blockRenderMap,
 	        blockRendererFn = _props.blockRendererFn,
@@ -6867,26 +6922,20 @@ var Draft =
 	    var currentDepth = null;
 	    var lastWrapperTemplate = null;
 
-	    for (var ii = 0; ii < blocksAsArray.length; ii++) {
-	      var _block = blocksAsArray[ii];
-	      var key = _block.getKey();
-	      var blockType = _block.getType();
+	    var buildPropsForBlock = function buildPropsForBlock(block) {
+	      var key = block.getKey();
 
-	      var customRenderer = blockRendererFn(_block);
-	      var CustomComponent = void 0,
-	          customProps = void 0,
-	          customEditable = void 0;
+	      var customRenderer = blockRendererFn(block);
+	      var customProps = void 0;
 	      if (customRenderer) {
-	        CustomComponent = customRenderer.component;
 	        customProps = customRenderer.props;
-	        customEditable = customRenderer.editable;
 	      }
 
 	      var direction = directionMap.get(key);
 	      var offsetKey = DraftOffsetKey.encode(key, 0, 0);
 	      var componentProps = {
 	        contentState: content,
-	        block: _block,
+	        block: block,
 	        blockProps: customProps,
 	        customStyleMap: customStyleMap,
 	        customStyleFn: customStyleFn,
@@ -6897,8 +6946,35 @@ var Draft =
 	        offsetKey: offsetKey,
 	        selection: selection,
 	        tree: editorState.getBlockTree(key),
-	        setDraftEditorSelectionCustom: this.props.setDraftEditorSelectionCustom
+	        setDraftEditorSelectionCustom: _this2.props.setDraftEditorSelectionCustom
 	      };
+
+	      return componentProps;
+	    };
+
+	    for (var ii = 0; ii < blocksAsArray.length; ii++) {
+	      var _block = blocksAsArray[ii];
+	      var key = _block.getKey();
+	      var blockType = _block.getType();
+
+	      var customRenderer = blockRendererFn(_block);
+	      var CustomComponent = void 0,
+	          customEditable = void 0;
+	      if (customRenderer) {
+	        CustomComponent = customRenderer.component;
+	        customEditable = customRenderer.editable;
+	      }
+
+	      var direction = directionMap.get(key);
+	      var offsetKey = DraftOffsetKey.encode(key, 0, 0);
+
+	      var componentProps = buildPropsForBlock(_block);
+
+	      if ((_block.getChildBlockMap() || {}).size) {
+	        componentProps.childBlocksProps = _block.getChildBlockMap().map(function (childBlock) {
+	          return buildPropsForBlock(childBlock);
+	        });
+	      }
 
 	      var configForType = blockRenderMap.get(blockType);
 	      var wrapperTemplate = configForType.wrapper;
@@ -7736,11 +7812,11 @@ var Draft =
 	      bidiService.reset();
 	    }
 
-	    var blockMap = content.getBlockMap();
-	    var nextBidi = blockMap.valueSeq().map(function (block) {
+	    var flatBlockMap = content.getFlatBlockMap();
+	    var nextBidi = flatBlockMap.valueSeq().map(function (block) {
 	      return nullthrows(bidiService).getDirection(block.getText());
 	    });
-	    var bidiMap = OrderedMap(blockMap.keySeq().zip(nextBidi));
+	    var bidiMap = OrderedMap(flatBlockMap.keySeq().zip(nextBidi));
 
 	    if (prevBidiMap != null && Immutable.is(prevBidiMap, bidiMap)) {
 	      return prevBidiMap;
@@ -8236,24 +8312,29 @@ var Draft =
 	var applyEntityToContentBlock = __webpack_require__(78);
 
 	function applyEntityToContentState(contentState, selectionState, entityKey) {
-	  var blockMap = contentState.getBlockMap();
 	  var startKey = selectionState.getStartKey();
 	  var startOffset = selectionState.getStartOffset();
 	  var endKey = selectionState.getEndKey();
 	  var endOffset = selectionState.getEndOffset();
 
-	  var newBlocks = blockMap.skipUntil(function (_, k) {
-	    return k === startKey;
-	  }).takeUntil(function (_, k) {
-	    return k === endKey;
-	  }).toOrderedMap().merge(Immutable.OrderedMap([[endKey, blockMap.get(endKey)]])).map(function (block, blockKey) {
-	    var sliceStart = blockKey === startKey ? startOffset : 0;
-	    var sliceEnd = blockKey === endKey ? endOffset : block.getLength();
-	    return applyEntityToContentBlock(block, sliceStart, sliceEnd, entityKey);
-	  });
+	  var blockMapOp = function blockMapOp(givenBlockMap) {
+	    var newBlocks = givenBlockMap.skipUntil(function (_, k) {
+	      return k === startKey;
+	    }).takeUntil(function (_, k) {
+	      return k === endKey;
+	    }).toOrderedMap().merge(Immutable.OrderedMap([[endKey, givenBlockMap.get(endKey)]])).filter(function (a) {
+	      return a;
+	    }).map(function (block, blockKey) {
+	      var sliceStart = blockKey === startKey ? startOffset : 0;
+	      var sliceEnd = blockKey === endKey ? endOffset : block.getLength();
+	      return applyEntityToContentBlock(block, sliceStart, sliceEnd, entityKey);
+	    });
+	    return givenBlockMap.merge(newBlocks);
+	  };
+
+	  contentState = contentState.applyToAllBlockMaps(blockMapOp);
 
 	  return contentState.merge({
-	    blockMap: blockMap.merge(newBlocks),
 	    selectionBefore: selectionState,
 	    selectionAfter: selectionState
 	  });
@@ -8281,15 +8362,21 @@ var Draft =
 
 	var DraftStringKey = __webpack_require__(40);
 
+	var Immutable = __webpack_require__(2);
+
 	var encodeEntityRanges = __webpack_require__(98);
 	var encodeInlineStyleRanges = __webpack_require__(99);
+
+	var List = Immutable.List,
+	    OrderedMap = Immutable.OrderedMap;
+
 
 	function convertFromDraftStateToRaw(contentState) {
 	  var entityStorageKey = 0;
 	  var entityStorageMap = {};
 	  var rawBlocks = [];
 
-	  contentState.getBlockMap().forEach(function (block, blockKey) {
+	  var processBlock = function processBlock(block, blockKey) {
 	    block.findEntityRanges(function (character) {
 	      return character.getEntity() !== null;
 	    }, function (start) {
@@ -8300,15 +8387,37 @@ var Draft =
 	      }
 	    });
 
-	    rawBlocks.push({
+	    var markers = [];
+	    if (block.markers && block.markers.size) {
+	      markers = block.getMarkers();
+	    }
+
+	    var childBlockMap = [];
+	    if (block.childBlockMap && block.childBlockMap.size) {
+	      childBlockMap = [];
+	      block.childBlockMap.forEach(function (block, blockKey) {
+	        var processedBlock = processBlock(block, blockKey);
+	        childBlockMap.push(processedBlock);
+	      });
+	    }
+
+	    return {
 	      key: blockKey,
+	      parentKey: block.getParentKey(),
 	      text: block.getText(),
 	      type: block.getType(),
 	      depth: block.getDepth(),
 	      inlineStyleRanges: encodeInlineStyleRanges(block),
 	      entityRanges: encodeEntityRanges(block, entityStorageMap),
-	      data: block.getData().toObject()
-	    });
+	      data: block.getData().toObject(),
+	      markers: markers,
+	      childBlockMap: childBlockMap
+	    };
+	  };
+
+	  contentState.getBlockMap().forEach(function (block, blockKey) {
+	    var processedBlock = processBlock(block, blockKey);
+	    rawBlocks.push(processedBlock);
 	  });
 
 	  // Flip storage map so that our storage keys map to global
@@ -8364,7 +8473,9 @@ var Draft =
 	var generateRandomKey = __webpack_require__(7);
 	var Immutable = __webpack_require__(2);
 
-	var Map = Immutable.Map;
+	var Map = Immutable.Map,
+	    List = Immutable.List,
+	    OrderedMap = Immutable.OrderedMap;
 
 
 	function convertFromRawToDraftState(rawState) {
@@ -8385,8 +8496,9 @@ var Draft =
 	    fromStorageToLocal[storageKey] = newKey;
 	  });
 
-	  var contentBlocks = blocks.map(function (block) {
+	  var prepareBlockData = function prepareBlockData(block) {
 	    var key = block.key,
+	        parentKey = block.parentKey,
 	        type = block.type,
 	        text = block.text,
 	        depth = block.depth,
@@ -8400,6 +8512,20 @@ var Draft =
 	    entityRanges = entityRanges || [];
 	    data = Map(data);
 
+	    var childBlockMap = OrderedMap();
+	    if (Array.isArray(block.childBlockMap)) {
+	      var childrenPrepped = [];
+	      block.childBlockMap.map(function (rawBlockData) {
+	        childrenPrepped.push([rawBlockData.key, prepareBlockData(rawBlockData)]);
+	      });
+	      childBlockMap = OrderedMap(childrenPrepped);
+	    }
+
+	    var markers = List();
+	    if (Array.isArray(block.markers)) {
+	      markers = List(block.markers);
+	    }
+
 	    var inlineStyles = decodeInlineStyleRanges(text, inlineStyleRanges);
 
 	    // Translate entity range keys to the DraftEntity map.
@@ -8412,8 +8538,20 @@ var Draft =
 	    var entities = decodeEntityRanges(text, filteredEntityRanges);
 	    var characterList = createCharacterList(inlineStyles, entities);
 
-	    return new ContentBlock({ key: key, type: type, text: text, depth: depth, characterList: characterList, data: data });
-	  });
+	    return new ContentBlock({
+	      key: key,
+	      parentKey: parentKey,
+	      type: type,
+	      text: text,
+	      depth: depth,
+	      characterList: characterList,
+	      data: data,
+	      childBlockMap: childBlockMap,
+	      markers: markers
+	    });
+	  };
+
+	  var contentBlocks = blocks.map(prepareBlockData);
 
 	  return ContentState.createFromBlockArray(contentBlocks);
 	}
@@ -8714,6 +8852,12 @@ var Draft =
 	var isWebKit = UserAgent.isEngine('WebKit');
 
 	function editOnBlur(editor, e) {
+	  if (editor.props.handleBlur) {
+	    var output = editor.props.handleBlur(editor, e);
+	    if (output === 'handled') {
+	      return;
+	    }
+	  }
 	  // Webkit has a bug in which blurring a contenteditable by clicking on
 	  // other active elements will trigger the `blur` event but will not remove
 	  // the DOM selection from the contenteditable. We therefore force the
@@ -10159,7 +10303,7 @@ var Draft =
 	  var finalOffset;
 
 	  if (fragmentSize === 1 && !firstFragmentPartIsAtomic) {
-	    var targetBlock = blockMap.get(targetKey);
+	    var targetBlock = contentState.getBlockForKey(targetKey);
 	    var pastedBlock = fragment.first();
 	    var text = targetBlock.getText();
 	    var chars = targetBlock.getCharacterList();
@@ -10170,13 +10314,13 @@ var Draft =
 	      data: pastedBlock.getData()
 	    });
 
-	    blockMap = blockMap.set(targetKey, newBlock);
+	    blockMap = contentState.changeBlockForKey(targetKey, newBlock).getBlockMap();
 
 	    finalKey = targetKey;
 	    finalOffset = targetOffset + pastedBlock.getText().length;
 
 	    return contentState.merge({
-	      blockMap: blockMap.set(targetKey, newBlock),
+	      blockMap: blockMap,
 	      selectionBefore: selectionState,
 	      selectionAfter: selectionState.merge({
 	        anchorKey: finalKey,
@@ -10317,10 +10461,9 @@ var Draft =
 	    return contentState;
 	  }
 
-	  var blockMap = contentState.getBlockMap();
 	  var key = selectionState.getStartKey();
 	  var offset = selectionState.getStartOffset();
-	  var block = blockMap.get(key);
+	  var block = contentState.getBlockForKey(key);
 	  var blockText = block.getText();
 
 	  var newBlock = block.merge({
@@ -10330,8 +10473,8 @@ var Draft =
 
 	  var newOffset = offset + len;
 
-	  return contentState.merge({
-	    blockMap: blockMap.set(key, newBlock),
+	  var newContentState = contentState.changeBlockForKey(key, newBlock);
+	  return newContentState.merge({
 	    selectionAfter: selectionState.merge({
 	      anchorOffset: newOffset,
 	      focusOffset: newOffset
@@ -10856,20 +10999,19 @@ var Draft =
 
 	function removeRangeFromContentState(contentState, selectionState) {
 
-	  var blockMap = contentState.getBlockMap();
 	  var startKey = selectionState.getStartKey();
 	  var startOffset = selectionState.getStartOffset();
 	  var endKey = selectionState.getEndKey();
 	  var endOffset = selectionState.getEndOffset();
 
-	  var startBlock = blockMap.get(startKey);
+	  var startBlock = contentState.getBlockForKey(startKey);
 	  var startIsAtomic = startBlock.getType() === 'atomic';
 	  // Any kind of selection on `atomic`, including collapsed one,
 	  // is treated as full selection of `atomic`
 	  if (selectionState.isCollapsed() && !startIsAtomic) {
 	    return contentState;
 	  }
-	  var endBlock = blockMap.get(endKey);
+	  var endBlock = contentState.getBlockForKey(endKey);
 	  var characterList;
 
 	  if (startBlock === endBlock) {
@@ -10883,7 +11025,17 @@ var Draft =
 	    characterList: characterList
 	  });
 
-	  var newBlocks = blockMap.toSeq().skipUntil(function (_, k) {
+	  var startBlockParentKey = startBlock.getParentKey();
+	  var startBlockParent = startBlockParentKey && contentState.getBlockForKey(startBlockParentKey);
+
+	  var targetBlockMap = void 0;
+	  if (startBlockParent) {
+	    targetBlockMap = startBlockParent.getChildBlockMap();
+	  } else {
+	    targetBlockMap = contentState.getBlockMap();
+	  }
+
+	  var newBlocks = targetBlockMap.toSeq().skipUntil(function (_, k) {
 	    return k === startKey;
 	  }).takeUntil(function (_, k) {
 	    return k === endKey;
@@ -10891,7 +11043,7 @@ var Draft =
 	    return k === startKey ? modifiedStart : null;
 	  });
 
-	  blockMap = blockMap.merge(newBlocks).filter(function (block) {
+	  targetBlockMap = targetBlockMap.merge(newBlocks).filter(function (block) {
 	    return !!block;
 	  });
 
@@ -10900,7 +11052,7 @@ var Draft =
 	  var newSelectionKey = startIsAtomic ? keyAfterSelection || keyBeforeSelection : startKey;
 	  var newSelectionOffset = startIsAtomic ? 0 : startOffset;
 
-	  if (!blockMap.size) {
+	  if (!targetBlockMap.size) {
 	    var newKey = generateRandomKey();
 	    var newBlock = startBlock.merge({
 	      text: '',
@@ -10908,13 +11060,24 @@ var Draft =
 	      characterList: Immutable.List(),
 	      key: newKey
 	    });
-	    blockMap = blockMap.merge(Immutable.OrderedMap([[newKey, newBlock]]));
+	    targetBlockMap = targetBlockMap.merge(Immutable.OrderedMap([[newKey, newBlock]]));
 	    newSelectionKey = newKey;
 	    newSelectionOffset = 0;
 	  }
 
+	  var newTopLevelBlockMap = void 0;
+	  if (startBlockParent) {
+	    var topLevelBlockMap = contentState.getBlockMap();
+	    newTopLevelBlockMap = topLevelBlockMap.merge(Immutable.Map([[startBlockParentKey, startBlockParent.set('childBlockMap', targetBlockMap)]]));
+	  } else {
+	    newTopLevelBlockMap = targetBlockMap;
+	  }
+
+	  contentState = contentState.merge({
+	    blockMap: newTopLevelBlockMap
+	  });
+
 	  return contentState.merge({
-	    blockMap: blockMap,
 	    selectionBefore: selectionState,
 	    selectionAfter: selectionState.merge({
 	      anchorKey: newSelectionKey,
@@ -11068,7 +11231,9 @@ var Draft =
 	    // other than the node we are selecting. This should only occur in Firefox,
 	    // since it is the only browser to support multiple selections.
 	    // See https://bugzilla.mozilla.org/show_bug.cgi?id=921444.
-	    selection.extend(node, offset);
+	    if (selection.rangeCount > 0) {
+	      selection.extend(node, offset);
+	    }
 	  } else {
 	    // IE doesn't support extend. This will mean no backward selection.
 	    // Extract the existing selection range and add focus to it.
@@ -11198,11 +11363,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 */
 	var PhotosMimeType = {
@@ -11229,11 +11392,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * @typechecks
 	 * @stub
@@ -11271,11 +11432,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * 
 	 */
@@ -11306,11 +11465,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * @typechecks
 	 * 
@@ -11411,11 +11568,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 */
 
@@ -11498,11 +11653,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 */
 
@@ -11887,11 +12040,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * @typechecks
 	 */
@@ -11923,11 +12074,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * @typechecks
 	 */
@@ -12052,11 +12201,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * @typechecks
 	 */
@@ -12092,11 +12239,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * @typechecks
 	 */
@@ -12130,11 +12275,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * @typechecks
 	 */
@@ -12185,11 +12328,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * @typechecks
 	 */
@@ -12241,11 +12382,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * @typechecks
 	 */
@@ -12297,11 +12436,9 @@ var Draft =
 	  return width || 0;
 	} /**
 	   * Copyright (c) 2013-present, Facebook, Inc.
-	   * All rights reserved.
 	   *
-	   * This source code is licensed under the BSD-style license found in the
-	   * LICENSE file in the root directory of this source tree. An additional grant
-	   * of patent rights can be found in the PATENTS file in the same directory.
+	   * This source code is licensed under the MIT license found in the
+	   * LICENSE file in the root directory of this source tree.
 	   *
 	   * 
 	   * @typechecks
@@ -12350,11 +12487,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * @typechecks
 	 */
@@ -12387,11 +12522,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * @typechecks
 	 */
@@ -12416,11 +12549,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * @typechecks
 	 */
@@ -12443,11 +12574,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * @typechecks static-only
 	 */
@@ -12487,11 +12616,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 */
 
@@ -12542,11 +12669,9 @@ var Draft =
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 * 
 	 * @typechecks static-only
@@ -12576,11 +12701,9 @@ var Draft =
 
 	/* WEBPACK VAR INJECTION */(function(global) {/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
-	 * All rights reserved.
 	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
+	 * This source code is licensed under the MIT license found in the
+	 * LICENSE file in the root directory of this source tree.
 	 *
 	 */
 
@@ -12980,13 +13103,13 @@ var Draft =
 /* 144 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var __WEBPACK_AMD_DEFINE_RESULT__;/**
-	 * UAParser.js v0.7.14
+	var __WEBPACK_AMD_DEFINE_RESULT__;/*!
+	 * UAParser.js v0.7.19
 	 * Lightweight JavaScript-based User-Agent string parser
 	 * https://github.com/faisalman/ua-parser-js
 	 *
 	 * Copyright © 2012-2016 Faisal Salman <fyzlman@gmail.com>
-	 * Dual licensed under GPLv2 & MIT
+	 * Dual licensed under GPLv2 or MIT
 	 */
 
 	(function (window, undefined) {
@@ -12998,7 +13121,7 @@ var Draft =
 	    /////////////
 
 
-	    var LIBVERSION  = '0.7.14',
+	    var LIBVERSION  = '0.7.19',
 	        EMPTY       = '',
 	        UNKNOWN     = '?',
 	        FUNC_TYPE   = 'function',
@@ -13120,7 +13243,7 @@ var Draft =
 	                }
 	                i += 2;
 	            }
-	            //console.log(this);
+	            // console.log(this);
 	            //return this;
 	        },
 
@@ -13226,7 +13349,7 @@ var Draft =
 
 	            // Mixed
 	            /(kindle)\/([\w\.]+)/i,                                             // Kindle
-	            /(lunascape|maxthon|netfront|jasmine|blazer)[\/\s]?([\w\.]+)*/i,
+	            /(lunascape|maxthon|netfront|jasmine|blazer)[\/\s]?([\w\.]*)/i,
 	                                                                                // Lunascape/Maxthon/Netfront/Jasmine/Blazer
 
 	            // Trident based
@@ -13235,16 +13358,16 @@ var Draft =
 	            /(?:ms|\()(ie)\s([\w\.]+)/i,                                        // Internet Explorer
 
 	            // Webkit/KHTML based
-	            /(rekonq)\/([\w\.]+)*/i,                                            // Rekonq
-	            /(chromium|flock|rockmelt|midori|epiphany|silk|skyfire|ovibrowser|bolt|iron|vivaldi|iridium|phantomjs|bowser)\/([\w\.-]+)/i
+	            /(rekonq)\/([\w\.]*)/i,                                             // Rekonq
+	            /(chromium|flock|rockmelt|midori|epiphany|silk|skyfire|ovibrowser|bolt|iron|vivaldi|iridium|phantomjs|bowser|quark)\/([\w\.-]+)/i
 	                                                                                // Chromium/Flock/RockMelt/Midori/Epiphany/Silk/Skyfire/Bolt/Iron/Iridium/PhantomJS/Bowser
 	            ], [NAME, VERSION], [
 
 	            /(trident).+rv[:\s]([\w\.]+).+like\sgecko/i                         // IE11
 	            ], [[NAME, 'IE'], VERSION], [
 
-	            /(edge)\/((\d+)?[\w\.]+)/i                                          // Microsoft Edge
-	            ], [NAME, VERSION], [
+	            /(edge|edgios|edga)\/((\d+)?[\w\.]+)/i                              // Microsoft Edge
+	            ], [[NAME, 'Edge'], VERSION], [
 
 	            /(yabrowser)\/([\w\.]+)/i                                           // Yandex
 	            ], [[NAME, 'Yandex'], VERSION], [
@@ -13252,8 +13375,13 @@ var Draft =
 	            /(puffin)\/([\w\.]+)/i                                              // Puffin
 	            ], [[NAME, 'Puffin'], VERSION], [
 
-	            /((?:[\s\/])uc?\s?browser|(?:juc.+)ucweb)[\/\s]?([\w\.]+)/i
-	                                                                                // UCBrowser
+	            /(focus)\/([\w\.]+)/i                                               // Firefox Focus
+	            ], [[NAME, 'Firefox Focus'], VERSION], [
+
+	            /(opt)\/([\w\.]+)/i                                                 // Opera Touch
+	            ], [[NAME, 'Opera Touch'], VERSION], [
+
+	            /((?:[\s\/])uc?\s?browser|(?:juc.+)ucweb)[\/\s]?([\w\.]+)/i         // UCBrowser
 	            ], [[NAME, 'UCBrowser'], VERSION], [
 
 	            /(comodo_dragon)\/([\w\.]+)/i                                       // Comodo Dragon
@@ -13262,11 +13390,29 @@ var Draft =
 	            /(micromessenger)\/([\w\.]+)/i                                      // WeChat
 	            ], [[NAME, 'WeChat'], VERSION], [
 
+	            /(brave)\/([\w\.]+)/i                                              // Brave browser
+	            ], [[NAME, 'Brave'], VERSION], [
+
+	            /(qqbrowserlite)\/([\w\.]+)/i                                       // QQBrowserLite
+	            ], [NAME, VERSION], [
+
 	            /(QQ)\/([\d\.]+)/i                                                  // QQ, aka ShouQ
 	            ], [NAME, VERSION], [
 
 	            /m?(qqbrowser)[\/\s]?([\w\.]+)/i                                    // QQBrowser
 	            ], [NAME, VERSION], [
+
+	            /(BIDUBrowser)[\/\s]?([\w\.]+)/i                                    // Baidu Browser
+	            ], [NAME, VERSION], [
+
+	            /(2345Explorer)[\/\s]?([\w\.]+)/i                                   // 2345 Browser
+	            ], [NAME, VERSION], [
+
+	            /(MetaSr)[\/\s]?([\w\.]+)/i                                         // SouGouBrowser
+	            ], [NAME], [
+
+	            /(LBBROWSER)/i                                      // LieBao Browser
+	            ], [NAME], [
 
 	            /xiaomi\/miuibrowser\/([\w\.]+)/i                                   // MIUI Browser
 	            ], [VERSION, [NAME, 'MIUI Browser']], [
@@ -13274,7 +13420,11 @@ var Draft =
 	            /;fbav\/([\w\.]+);/i                                                // Facebook App for iOS & Android
 	            ], [VERSION, [NAME, 'Facebook']], [
 
-	            /(headlesschrome) ([\w\.]+)/i                                       // Chrome Headless
+	            /safari\s(line)\/([\w\.]+)/i,                                       // Line App for iOS
+	            /android.+(line)\/([\w\.]+)\/iab/i                                  // Line App for Android
+	            ], [NAME, VERSION], [
+
+	            /headlesschrome(?:\/([\w\.]+)|\s)/i                                 // Chrome Headless
 	            ], [VERSION, [NAME, 'Chrome Headless']], [
 
 	            /\swv\).+(chrome)\/([\w\.]+)/i                                      // Chrome WebView
@@ -13308,6 +13458,9 @@ var Draft =
 	            /version\/([\w\.]+).+?(mobile\s?safari|safari)/i                    // Safari & Safari Mobile
 	            ], [VERSION, NAME], [
 
+	            /webkit.+?(gsa)\/([\w\.]+).+?(mobile\s?safari|safari)(\/[\w\.]+)/i  // Google Search Appliance on iOS
+	            ], [[NAME, 'GSA'], VERSION], [
+
 	            /webkit.+?(mobile\s?safari|safari)(\/[\w\.]+)/i                     // Safari < 3.0
 	            ], [NAME, [VERSION, mapper.str, maps.browser.oldsafari.version]], [
 
@@ -13321,7 +13474,8 @@ var Draft =
 	            /(swiftfox)/i,                                                      // Swiftfox
 	            /(icedragon|iceweasel|camino|chimera|fennec|maemo\sbrowser|minimo|conkeror)[\/\s]?([\w\.\+]+)/i,
 	                                                                                // IceDragon/Iceweasel/Camino/Chimera/Fennec/Maemo/Minimo/Conkeror
-	            /(firefox|seamonkey|k-meleon|icecat|iceape|firebird|phoenix)\/([\w\.-]+)/i,
+	            /(firefox|seamonkey|k-meleon|icecat|iceape|firebird|phoenix|palemoon|basilisk|waterfox)\/([\w\.-]+)$/i,
+
 	                                                                                // Firefox/SeaMonkey/K-Meleon/IceCat/IceApe/Firebird/Phoenix
 	            /(mozilla)\/([\w\.]+).+rv\:.+gecko\/\d+/i,                          // Mozilla
 
@@ -13329,7 +13483,7 @@ var Draft =
 	            /(polaris|lynx|dillo|icab|doris|amaya|w3m|netsurf|sleipnir)[\/\s]?([\w\.]+)/i,
 	                                                                                // Polaris/Lynx/Dillo/iCab/Doris/Amaya/w3m/NetSurf/Sleipnir
 	            /(links)\s\(([\w\.]+)/i,                                            // Links
-	            /(gobrowser)\/?([\w\.]+)*/i,                                        // GoBrowser
+	            /(gobrowser)\/?([\w\.]*)/i,                                         // GoBrowser
 	            /(ice\s?browser)\/v?([\w\._]+)/i,                                   // ICE Browser
 	            /(mosaic)[\/\s]([\w\.]+)/i                                          // Mosaic
 	            ], [NAME, VERSION]
@@ -13467,7 +13621,7 @@ var Draft =
 	            /(sun4\w)[;\)]/i                                                    // SPARC
 	            ], [[ARCHITECTURE, 'sparc']], [
 
-	            /((?:avr32|ia64(?=;))|68k(?=\))|arm(?:64|(?=v\d+;))|(?=atmel\s)avr|(?:irix|mips|sparc)(?:64)?(?=;)|pa-risc)/i
+	            /((?:avr32|ia64(?=;))|68k(?=\))|arm(?:64|(?=v\d+[;l]))|(?=atmel\s)avr|(?:irix|mips|sparc)(?:64)?(?=;)|pa-risc)/i
 	                                                                                // IA64, 68K, ARM/64, AVR/32, IRIX/64, MIPS/64, SPARC/64, PA-RISC
 	            ], [[ARCHITECTURE, util.lowerize]]
 	        ],
@@ -13491,10 +13645,12 @@ var Draft =
 	            /(dell)\s(strea[kpr\s\d]*[\dko])/i                                  // Dell Streak
 	            ], [VENDOR, MODEL, [TYPE, TABLET]], [
 
-	            /(kf[A-z]+)\sbuild\/[\w\.]+.*silk\//i                               // Kindle Fire HD
+	            /(kf[A-z]+)\sbuild\/.+silk\//i                                      // Kindle Fire HD
 	            ], [MODEL, [VENDOR, 'Amazon'], [TYPE, TABLET]], [
-	            /(sd|kf)[0349hijorstuw]+\sbuild\/[\w\.]+.*silk\//i                  // Fire Phone
+	            /(sd|kf)[0349hijorstuw]+\sbuild\/.+silk\//i                         // Fire Phone
 	            ], [[MODEL, mapper.str, maps.device.amazon.model], [VENDOR, 'Amazon'], [TYPE, MOBILE]], [
+	            /android.+aft([bms])\sbuild/i                                       // Fire TV
+	            ], [MODEL, [VENDOR, 'Amazon'], [TYPE, SMARTTV]], [
 
 	            /\((ip[honed|\s\w*]+);.+(apple)/i                                   // iPod/iPhone
 	            ], [MODEL, VENDOR, [TYPE, MOBILE]], [
@@ -13502,7 +13658,7 @@ var Draft =
 	            ], [MODEL, [VENDOR, 'Apple'], [TYPE, MOBILE]], [
 
 	            /(blackberry)[\s-]?(\w+)/i,                                         // BlackBerry
-	            /(blackberry|benq|palm(?=\-)|sonyericsson|acer|asus|dell|meizu|motorola|polytron)[\s_-]?([\w-]+)*/i,
+	            /(blackberry|benq|palm(?=\-)|sonyericsson|acer|asus|dell|meizu|motorola|polytron)[\s_-]?([\w-]*)/i,
 	                                                                                // BenQ/Palm/Sony-Ericsson/Acer/Asus/Dell/Meizu/Motorola/Polytron
 	            /(hp)\s([\w\s]+\w)/i,                                               // HP iPAQ
 	            /(asus)-?(\w+)/i                                                    // Asus
@@ -13536,8 +13692,8 @@ var Draft =
 	            ], [VENDOR, MODEL, [TYPE, TABLET]], [
 
 	            /(htc)[;_\s-]+([\w\s]+(?=\))|\w+)*/i,                               // HTC
-	            /(zte)-(\w+)*/i,                                                    // ZTE
-	            /(alcatel|geeksphone|lenovo|nexian|panasonic|(?=;\s)sony)[_\s-]?([\w-]+)*/i
+	            /(zte)-(\w*)/i,                                                     // ZTE
+	            /(alcatel|geeksphone|lenovo|nexian|panasonic|(?=;\s)sony)[_\s-]?([\w-]*)/i
 	                                                                                // Alcatel/GeeksPhone/Lenovo/Nexian/Panasonic/Sony
 	            ], [VENDOR, [MODEL, /_/g, ' '], [TYPE, MOBILE]], [
 
@@ -13557,8 +13713,8 @@ var Draft =
 	            ], [[MODEL, /\./g, ' '], [VENDOR, 'Microsoft'], [TYPE, MOBILE]], [
 
 	                                                                                // Motorola
-	            /\s(milestone|droid(?:[2-4x]|\s(?:bionic|x2|pro|razr))?(:?\s4g)?)[\w\s]+build\//i,
-	            /mot[\s-]?(\w+)*/i,
+	            /\s(milestone|droid(?:[2-4x]|\s(?:bionic|x2|pro|razr))?:?(\s4g)?)[\w\s]+build\//i,
+	            /mot[\s-]?(\w*)/i,
 	            /(XT\d{3,4}) build\//i,
 	            /(nexus\s6)/i
 	            ], [MODEL, [VENDOR, 'Motorola'], [TYPE, MOBILE]], [
@@ -13580,15 +13736,15 @@ var Draft =
 	            /smart-tv.+(samsung)/i
 	            ], [VENDOR, [TYPE, SMARTTV], MODEL], [
 	            /((s[cgp]h-\w+|gt-\w+|galaxy\snexus|sm-\w[\w\d]+))/i,
-	            /(sam[sung]*)[\s-]*(\w+-?[\w-]*)*/i,
+	            /(sam[sung]*)[\s-]*(\w+-?[\w-]*)/i,
 	            /sec-((sgh\w+))/i
 	            ], [[VENDOR, 'Samsung'], MODEL, [TYPE, MOBILE]], [
 
-	            /sie-(\w+)*/i                                                       // Siemens
+	            /sie-(\w*)/i                                                        // Siemens
 	            ], [MODEL, [VENDOR, 'Siemens'], [TYPE, MOBILE]], [
 
 	            /(maemo|nokia).*(n900|lumia\s\d+)/i,                                // Nokia
-	            /(nokia)[\s_-]?([\w-]+)*/i
+	            /(nokia)[\s_-]?([\w-]*)/i
 	            ], [[VENDOR, 'Nokia'], MODEL, [TYPE, MOBILE]], [
 
 	            /android\s3\.[\s\w;-]{10}(a\d{3})/i                                 // Acer
@@ -13601,7 +13757,7 @@ var Draft =
 	            /(lg) netcast\.tv/i                                                 // LG SmartTV
 	            ], [VENDOR, MODEL, [TYPE, SMARTTV]], [
 	            /(nexus\s[45])/i,                                                   // LG
-	            /lg[e;\s\/-]+(\w+)*/i,
+	            /lg[e;\s\/-]+(\w*)/i,
 	            /android.+lg(\-?[\d\w]+)\s+build/i
 	            ], [MODEL, [VENDOR, 'LG'], [TYPE, MOBILE]], [
 
@@ -13623,27 +13779,32 @@ var Draft =
 	            /android.+;\s(glass)\s\d/i                                          // Google Glass
 	            ], [MODEL, [VENDOR, 'Google'], [TYPE, WEARABLE]], [
 
-	            /android.+;\s(pixel c)\s/i                                          // Google Pixel C
+	            /android.+;\s(pixel c)[\s)]/i                                       // Google Pixel C
 	            ], [MODEL, [VENDOR, 'Google'], [TYPE, TABLET]], [
 
-	            /android.+;\s(pixel xl|pixel)\s/i                                   // Google Pixel
+	            /android.+;\s(pixel( [23])?( xl)?)\s/i                              // Google Pixel
 	            ], [MODEL, [VENDOR, 'Google'], [TYPE, MOBILE]], [
 
-	            /android.+(\w+)\s+build\/hm\1/i,                                    // Xiaomi Hongmi 'numeric' models
+	            /android.+;\s(\w+)\s+build\/hm\1/i,                                 // Xiaomi Hongmi 'numeric' models
 	            /android.+(hm[\s\-_]*note?[\s_]*(?:\d\w)?)\s+build/i,               // Xiaomi Hongmi
-	            /android.+(mi[\s\-_]*(?:one|one[\s_]plus|note lte)?[\s_]*(?:\d\w)?)\s+build/i    // Xiaomi Mi
+	            /android.+(mi[\s\-_]*(?:one|one[\s_]plus|note lte)?[\s_]*(?:\d?\w?)[\s_]*(?:plus)?)\s+build/i,    // Xiaomi Mi
+	            /android.+(redmi[\s\-_]*(?:note)?(?:[\s_]*[\w\s]+))\s+build/i       // Redmi Phones
 	            ], [[MODEL, /_/g, ' '], [VENDOR, 'Xiaomi'], [TYPE, MOBILE]], [
-
+	            /android.+(mi[\s\-_]*(?:pad)(?:[\s_]*[\w\s]+))\s+build/i            // Mi Pad tablets
+	            ],[[MODEL, /_/g, ' '], [VENDOR, 'Xiaomi'], [TYPE, TABLET]], [
 	            /android.+;\s(m[1-5]\snote)\sbuild/i                                // Meizu Tablet
 	            ], [MODEL, [VENDOR, 'Meizu'], [TYPE, TABLET]], [
+	            /(mz)-([\w-]{2,})/i                                                 // Meizu Phone
+	            ], [[VENDOR, 'Meizu'], MODEL, [TYPE, MOBILE]], [
 
-	            /android.+a000(1)\s+build/i                                         // OnePlus
+	            /android.+a000(1)\s+build/i,                                        // OnePlus
+	            /android.+oneplus\s(a\d{4})\s+build/i
 	            ], [MODEL, [VENDOR, 'OnePlus'], [TYPE, MOBILE]], [
 
 	            /android.+[;\/]\s*(RCT[\d\w]+)\s+build/i                            // RCA Tablets
 	            ], [MODEL, [VENDOR, 'RCA'], [TYPE, TABLET]], [
 
-	            /android.+[;\/]\s*(Venue[\d\s]*)\s+build/i                          // Dell Venue Tablets
+	            /android.+[;\/\s]+(Venue[\d\s]{2,7})\s+build/i                      // Dell Venue Tablets
 	            ], [MODEL, [VENDOR, 'Dell'], [TYPE, TABLET]], [
 
 	            /android.+[;\/]\s*(Q[T|M][\d\w]+)\s+build/i                         // Verizon Tablet
@@ -13655,8 +13816,8 @@ var Draft =
 	            /android.+[;\/]\s+(TM\d{3}.*\b)\s+build/i                           // Barnes & Noble Tablet
 	            ], [MODEL, [VENDOR, 'NuVision'], [TYPE, TABLET]], [
 
-	            /android.+[;\/]\s*(zte)?.+(k\d{2})\s+build/i                        // ZTE K Series Tablet
-	            ], [[VENDOR, 'ZTE'], MODEL, [TYPE, TABLET]], [
+	            /android.+;\s(k88)\sbuild/i                                         // ZTE K Series Tablet
+	            ], [MODEL, [VENDOR, 'ZTE'], [TYPE, TABLET]], [
 
 	            /android.+[;\/]\s*(gen\d{3})\s+build.*49h/i                         // Swiss GEN Mobile
 	            ], [MODEL, [VENDOR, 'Swiss'], [TYPE, MOBILE]], [
@@ -13667,26 +13828,29 @@ var Draft =
 	            /android.+[;\/]\s*((Zeki)?TB.*\b)\s+build/i                         // Zeki Tablets
 	            ], [MODEL, [VENDOR, 'Zeki'], [TYPE, TABLET]], [
 
-	            /(android).+[;\/]\s+([YR]\d{2}x?.*)\s+build/i,
-	            /android.+[;\/]\s+(Dragon[\-\s]+Touch\s+|DT)(.+)\s+build/i          // Dragon Touch Tablet
+	            /(android).+[;\/]\s+([YR]\d{2})\s+build/i,
+	            /android.+[;\/]\s+(Dragon[\-\s]+Touch\s+|DT)(\w{5})\sbuild/i        // Dragon Touch Tablet
 	            ], [[VENDOR, 'Dragon Touch'], MODEL, [TYPE, TABLET]], [
 
-	            /android.+[;\/]\s*(NS-?.+)\s+build/i                                // Insignia Tablets
+	            /android.+[;\/]\s*(NS-?\w{0,9})\sbuild/i                            // Insignia Tablets
 	            ], [MODEL, [VENDOR, 'Insignia'], [TYPE, TABLET]], [
 
-	            /android.+[;\/]\s*((NX|Next)-?.+)\s+build/i                         // NextBook Tablets
+	            /android.+[;\/]\s*((NX|Next)-?\w{0,9})\s+build/i                    // NextBook Tablets
 	            ], [MODEL, [VENDOR, 'NextBook'], [TYPE, TABLET]], [
 
-	            /android.+[;\/]\s*(Xtreme\_?)?(V(1[045]|2[015]|30|40|60|7[05]|90))\s+build/i
+	            /android.+[;\/]\s*(Xtreme\_)?(V(1[045]|2[015]|30|40|60|7[05]|90))\s+build/i
 	            ], [[VENDOR, 'Voice'], MODEL, [TYPE, MOBILE]], [                    // Voice Xtreme Phones
 
-	            /android.+[;\/]\s*(LVTEL\-?)?(V1[12])\s+build/i                     // LvTel Phones
+	            /android.+[;\/]\s*(LVTEL\-)?(V1[12])\s+build/i                     // LvTel Phones
 	            ], [[VENDOR, 'LvTel'], MODEL, [TYPE, MOBILE]], [
+
+	            /android.+;\s(PH-1)\s/i
+	            ], [MODEL, [VENDOR, 'Essential'], [TYPE, MOBILE]], [                // Essential PH-1
 
 	            /android.+[;\/]\s*(V(100MD|700NA|7011|917G).*\b)\s+build/i          // Envizen Tablets
 	            ], [MODEL, [VENDOR, 'Envizen'], [TYPE, TABLET]], [
 
-	            /android.+[;\/]\s*(Le[\s\-]+Pan)[\s\-]+(.*\b)\s+build/i             // Le Pan Tablets
+	            /android.+[;\/]\s*(Le[\s\-]+Pan)[\s\-]+(\w{1,9})\s+build/i          // Le Pan Tablets
 	            ], [VENDOR, MODEL, [TYPE, TABLET]], [
 
 	            /android.+[;\/]\s*(Trio[\s\-]*.*)\s+build/i                         // MachSpeed Tablets
@@ -13701,14 +13865,14 @@ var Draft =
 	            /android.+(KS(.+))\s+build/i                                        // Amazon Kindle Tablets
 	            ], [MODEL, [VENDOR, 'Amazon'], [TYPE, TABLET]], [
 
-	            /android.+(Gigaset)[\s\-]+(Q.+)\s+build/i                           // Gigaset Tablets
+	            /android.+(Gigaset)[\s\-]+(Q\w{1,9})\s+build/i                      // Gigaset Tablets
 	            ], [VENDOR, MODEL, [TYPE, TABLET]], [
 
 	            /\s(tablet|tab)[;\/]/i,                                             // Unidentifiable Tablet
 	            /\s(mobile)(?:[;\/]|\ssafari)/i                                     // Unidentifiable Mobile
 	            ], [[TYPE, util.lowerize], VENDOR, MODEL], [
 
-	            /(android.+)[;\/].+build/i                                          // Generic Android Device
+	            /(android[\w\.\s\-]{0,9});.+build/i                                 // Generic Android Device
 	            ], [MODEL, [VENDOR, 'Generic']]
 
 
@@ -13775,7 +13939,7 @@ var Draft =
 	            /(icab)[\/\s]([23]\.[\d\.]+)/i                                      // iCab
 	            ], [NAME, VERSION], [
 
-	            /rv\:([\w\.]+).*(gecko)/i                                           // Gecko
+	            /rv\:([\w\.]{1,9}).+(gecko)/i                                       // Gecko
 	            ], [VERSION, NAME]
 	        ],
 
@@ -13785,7 +13949,7 @@ var Draft =
 	            /microsoft\s(windows)\s(vista|xp)/i                                 // Windows (iTunes)
 	            ], [NAME, VERSION], [
 	            /(windows)\snt\s6\.2;\s(arm)/i,                                     // Windows RT
-	            /(windows\sphone(?:\sos)*)[\s\/]?([\d\.\s]+\w)*/i,                  // Windows Phone
+	            /(windows\sphone(?:\sos)*)[\s\/]?([\d\.\s\w]*)/i,                   // Windows Phone
 	            /(windows\smobile|windows)[\s\/]?([ntce\d\.\s]+\w)/i
 	            ], [NAME, [VERSION, mapper.str, maps.os.windows.version]], [
 	            /(win(?=3|9|n)|win\s9x\s)([nt\d\.]+)/i
@@ -13794,13 +13958,13 @@ var Draft =
 	            // Mobile/Embedded OS
 	            /\((bb)(10);/i                                                      // BlackBerry 10
 	            ], [[NAME, 'BlackBerry'], VERSION], [
-	            /(blackberry)\w*\/?([\w\.]+)*/i,                                    // Blackberry
+	            /(blackberry)\w*\/?([\w\.]*)/i,                                     // Blackberry
 	            /(tizen)[\/\s]([\w\.]+)/i,                                          // Tizen
-	            /(android|webos|palm\sos|qnx|bada|rim\stablet\sos|meego|contiki)[\/\s-]?([\w\.]+)*/i,
+	            /(android|webos|palm\sos|qnx|bada|rim\stablet\sos|meego|contiki)[\/\s-]?([\w\.]*)/i,
 	                                                                                // Android/WebOS/Palm/QNX/Bada/RIM/MeeGo/Contiki
 	            /linux;.+(sailfish);/i                                              // Sailfish OS
 	            ], [NAME, VERSION], [
-	            /(symbian\s?os|symbos|s60(?=;))[\/\s-]?([\w\.]+)*/i                 // Symbian
+	            /(symbian\s?os|symbos|s60(?=;))[\/\s-]?([\w\.]*)/i                  // Symbian
 	            ], [[NAME, 'Symbian'], VERSION], [
 	            /\((series40);/i                                                    // Series 40
 	            ], [NAME], [
@@ -13811,43 +13975,43 @@ var Draft =
 	            /(nintendo|playstation)\s([wids34portablevu]+)/i,                   // Nintendo/Playstation
 
 	            // GNU/Linux based
-	            /(mint)[\/\s\(]?(\w+)*/i,                                           // Mint
+	            /(mint)[\/\s\(]?(\w*)/i,                                            // Mint
 	            /(mageia|vectorlinux)[;\s]/i,                                       // Mageia/VectorLinux
-	            /(joli|[kxln]?ubuntu|debian|[open]*suse|gentoo|(?=\s)arch|slackware|fedora|mandriva|centos|pclinuxos|redhat|zenwalk|linpus)[\/\s-]?(?!chrom)([\w\.-]+)*/i,
+	            /(joli|[kxln]?ubuntu|debian|suse|opensuse|gentoo|(?=\s)arch|slackware|fedora|mandriva|centos|pclinuxos|redhat|zenwalk|linpus)[\/\s-]?(?!chrom)([\w\.-]*)/i,
 	                                                                                // Joli/Ubuntu/Debian/SUSE/Gentoo/Arch/Slackware
 	                                                                                // Fedora/Mandriva/CentOS/PCLinuxOS/RedHat/Zenwalk/Linpus
-	            /(hurd|linux)\s?([\w\.]+)*/i,                                       // Hurd/Linux
-	            /(gnu)\s?([\w\.]+)*/i                                               // GNU
+	            /(hurd|linux)\s?([\w\.]*)/i,                                        // Hurd/Linux
+	            /(gnu)\s?([\w\.]*)/i                                                // GNU
 	            ], [NAME, VERSION], [
 
 	            /(cros)\s[\w]+\s([\w\.]+\w)/i                                       // Chromium OS
 	            ], [[NAME, 'Chromium OS'], VERSION],[
 
 	            // Solaris
-	            /(sunos)\s?([\w\.]+\d)*/i                                           // Solaris
+	            /(sunos)\s?([\w\.\d]*)/i                                            // Solaris
 	            ], [[NAME, 'Solaris'], VERSION], [
 
 	            // BSD based
-	            /\s([frentopc-]{0,4}bsd|dragonfly)\s?([\w\.]+)*/i                   // FreeBSD/NetBSD/OpenBSD/PC-BSD/DragonFly
+	            /\s([frentopc-]{0,4}bsd|dragonfly)\s?([\w\.]*)/i                    // FreeBSD/NetBSD/OpenBSD/PC-BSD/DragonFly
 	            ], [NAME, VERSION],[
 
-	            /(haiku)\s(\w+)/i                                                  // Haiku
+	            /(haiku)\s(\w+)/i                                                   // Haiku
 	            ], [NAME, VERSION],[
 
 	            /cfnetwork\/.+darwin/i,
-	            /ip[honead]+(?:.*os\s([\w]+)*\slike\smac|;\sopera)/i                // iOS
+	            /ip[honead]{2,4}(?:.*os\s([\w]+)\slike\smac|;\sopera)/i             // iOS
 	            ], [[VERSION, /_/g, '.'], [NAME, 'iOS']], [
 
-	            /(mac\sos\sx)\s?([\w\s\.]+\w)*/i,
+	            /(mac\sos\sx)\s?([\w\s\.]*)/i,
 	            /(macintosh|mac(?=_powerpc)\s)/i                                    // Mac OS
 	            ], [[NAME, 'Mac OS'], [VERSION, /_/g, '.']], [
 
 	            // Other
-	            /((?:open)?solaris)[\/\s-]?([\w\.]+)*/i,                            // Solaris
-	            /(aix)\s((\d)(?=\.|\)|\s)[\w\.]*)*/i,                               // AIX
-	            /(plan\s9|minix|beos|os\/2|amigaos|morphos|risc\sos|openvms)/i,
-	                                                                                // Plan9/Minix/BeOS/OS2/AmigaOS/MorphOS/RISCOS/OpenVMS
-	            /(unix)\s?([\w\.]+)*/i                                              // UNIX
+	            /((?:open)?solaris)[\/\s-]?([\w\.]*)/i,                             // Solaris
+	            /(aix)\s((\d)(?=\.|\)|\s)[\w\.])*/i,                                // AIX
+	            /(plan\s9|minix|beos|os\/2|amigaos|morphos|risc\sos|openvms|fuchsia)/i,
+	                                                                                // Plan9/Minix/BeOS/OS2/AmigaOS/MorphOS/RISCOS/OpenVMS/Fuchsia
+	            /(unix)\s?([\w\.]*)/i                                               // UNIX
 	            ], [NAME, VERSION]
 	        ]
 	    };
@@ -13856,7 +14020,7 @@ var Draft =
 	    /////////////////
 	    // Constructor
 	    ////////////////
-
+	    /*
 	    var Browser = function (name, version) {
 	        this[NAME] = name;
 	        this[VERSION] = version;
@@ -13871,7 +14035,7 @@ var Draft =
 	    };
 	    var Engine = Browser;
 	    var OS = Browser;
-
+	    */
 	    var UAParser = function (uastring, extensions) {
 
 	        if (typeof uastring === 'object') {
@@ -13885,30 +14049,35 @@ var Draft =
 
 	        var ua = uastring || ((window && window.navigator && window.navigator.userAgent) ? window.navigator.userAgent : EMPTY);
 	        var rgxmap = extensions ? util.extend(regexes, extensions) : regexes;
-	        var browser = new Browser();
-	        var cpu = new CPU();
-	        var device = new Device();
-	        var engine = new Engine();
-	        var os = new OS();
+	        //var browser = new Browser();
+	        //var cpu = new CPU();
+	        //var device = new Device();
+	        //var engine = new Engine();
+	        //var os = new OS();
 
 	        this.getBrowser = function () {
+	            var browser = { name: undefined, version: undefined };
 	            mapper.rgx.call(browser, ua, rgxmap.browser);
 	            browser.major = util.major(browser.version); // deprecated
 	            return browser;
 	        };
 	        this.getCPU = function () {
+	            var cpu = { architecture: undefined };
 	            mapper.rgx.call(cpu, ua, rgxmap.cpu);
 	            return cpu;
 	        };
 	        this.getDevice = function () {
+	            var device = { vendor: undefined, model: undefined, type: undefined };
 	            mapper.rgx.call(device, ua, rgxmap.device);
 	            return device;
 	        };
 	        this.getEngine = function () {
+	            var engine = { name: undefined, version: undefined };
 	            mapper.rgx.call(engine, ua, rgxmap.engine);
 	            return engine;
 	        };
 	        this.getOS = function () {
+	            var os = { name: undefined, version: undefined };
 	            mapper.rgx.call(os, ua, rgxmap.os);
 	            return os;
 	        };
@@ -13927,11 +14096,11 @@ var Draft =
 	        };
 	        this.setUA = function (uastring) {
 	            ua = uastring;
-	            browser = new Browser();
-	            cpu = new CPU();
-	            device = new Device();
-	            engine = new Engine();
-	            os = new OS();
+	            //browser = new Browser();
+	            //cpu = new CPU();
+	            //device = new Device();
+	            //engine = new Engine();
+	            //os = new OS();
 	            return this;
 	        };
 	        return this;
@@ -13978,6 +14147,35 @@ var Draft =
 	        if (typeof module !== UNDEF_TYPE && module.exports) {
 	            exports = module.exports = UAParser;
 	        }
+	        // TODO: test!!!!!!!!
+	        /*
+	        if (require && require.main === module && process) {
+	            // cli
+	            var jsonize = function (arr) {
+	                var res = [];
+	                for (var i in arr) {
+	                    res.push(new UAParser(arr[i]).getResult());
+	                }
+	                process.stdout.write(JSON.stringify(res, null, 2) + '\n');
+	            };
+	            if (process.stdin.isTTY) {
+	                // via args
+	                jsonize(process.argv.slice(2));
+	            } else {
+	                // via pipe
+	                var str = '';
+	                process.stdin.on('readable', function() {
+	                    var read = process.stdin.read();
+	                    if (read !== null) {
+	                        str += read;
+	                    }
+	                });
+	                process.stdin.on('end', function () {
+	                    jsonize(str.replace(/\n$/, '').split('\n'));
+	                });
+	            }
+	        }
+	        */
 	        exports.UAParser = UAParser;
 	    } else {
 	        // requirejs env (optional)
@@ -13997,7 +14195,7 @@ var Draft =
 	    //   jQuery always exports to global scope, unless jQuery.noConflict(true) is used,
 	    //   and we should catch that.
 	    var $ = window && (window.jQuery || window.Zepto);
-	    if (typeof $ !== UNDEF_TYPE) {
+	    if (typeof $ !== UNDEF_TYPE && !$.ua) {
 	        var parser = new UAParser();
 	        $.ua = parser.getResult();
 	        $.ua.get = function () {

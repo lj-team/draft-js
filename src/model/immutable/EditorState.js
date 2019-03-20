@@ -22,11 +22,12 @@ import type {BlockMap} from 'BlockMap';
 import type {DraftDecoratorType} from 'DraftDecoratorType';
 import type {DraftInlineStyle} from 'DraftInlineStyle';
 import type {EntityMap} from 'EntityMap';
-import type {List, OrderedMap} from 'immutable';
+import type {List} from 'immutable';
 import type {EditorChangeType} from 'EditorChangeType';
 
 var {
   OrderedSet,
+  OrderedMap,
   Record,
   Stack,
 } = Immutable;
@@ -516,8 +517,16 @@ function generateNewTreeMap(
   contentState: ContentState,
   decorator?: ?DraftDecoratorType
 ): OrderedMap<string, List<any>> {
-  return contentState
-    .getBlockMap()
+  const allLevelBlocks = contentState.getBlockMap().flatMap(
+    (block, key) =>
+      OrderedMap(
+        [[key, block]]
+      ).merge(
+        block.getChildBlockMap()
+      )
+  );
+
+  return allLevelBlocks
     .map(block => BlockTree.generate(contentState, block, decorator))
     .toOrderedMap();
 }
@@ -536,9 +545,16 @@ function regenerateTreeForNewBlocks(
   const contentState = editorState.getCurrentContent().set('entityMap', newEntityMap);
   var prevBlockMap = contentState.getBlockMap();
   var prevTreeMap = editorState.getImmutable().get('treeMap');
+
+  let newSeqWithChildBlocks = newBlockMap.toSeq();
+  newBlockMap.forEach(block => {
+    newSeqWithChildBlocks = newSeqWithChildBlocks.concat(
+      (block.getChildBlockMap() || OrderedMap()).toSeq()
+    );
+  });
+
   return prevTreeMap.merge(
-    newBlockMap
-      .toSeq()
+    newSeqWithChildBlocks
       .filter((block, key) => block !== prevBlockMap.get(key))
       .map(block => BlockTree.generate(contentState, block, decorator)),
   );

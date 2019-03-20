@@ -34,7 +34,7 @@ function removeEntitiesAtEdges(
 
   var startKey = selectionState.getStartKey();
   var startOffset = selectionState.getStartOffset();
-  var startBlock = blockMap.get(startKey);
+  var startBlock = contentState.getBlockForKey(startKey);
   var updatedStart = removeForBlock(entityMap, startBlock, startOffset);
 
   if (updatedStart !== startBlock) {
@@ -43,7 +43,7 @@ function removeEntitiesAtEdges(
 
   var endKey = selectionState.getEndKey();
   var endOffset = selectionState.getEndOffset();
-  var endBlock = blockMap.get(endKey);
+  var endBlock = contentState.getBlockForKey(endKey);
   if (startKey === endKey) {
     endBlock = updatedStart;
   }

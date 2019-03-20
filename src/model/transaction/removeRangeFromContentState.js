@@ -25,20 +25,19 @@ function removeRangeFromContentState(
   selectionState: SelectionState
 ): ContentState {
 
-  var blockMap = contentState.getBlockMap();
   var startKey = selectionState.getStartKey();
   var startOffset = selectionState.getStartOffset();
   var endKey = selectionState.getEndKey();
   var endOffset = selectionState.getEndOffset();
 
-  var startBlock = blockMap.get(startKey);
+  var startBlock = contentState.getBlockForKey(startKey);
   var startIsAtomic = startBlock.getType() === 'atomic';
   // Any kind of selection on `atomic`, including collapsed one,
   // is treated as full selection of `atomic`
   if (selectionState.isCollapsed() && !startIsAtomic) {
     return contentState;
   }
-  var endBlock = blockMap.get(endKey);
+  var endBlock = contentState.getBlockForKey(endKey);
   var characterList;
 
   if (startBlock === endBlock) {
@@ -65,21 +64,31 @@ function removeRangeFromContentState(
     })
   ;
 
-  var newBlocks = blockMap
+  const startBlockParentKey = startBlock.getParentKey();
+  const startBlockParent = startBlockParentKey && contentState.getBlockForKey(startBlockParentKey);
+
+  let targetBlockMap;
+  if (startBlockParent) {
+    targetBlockMap = startBlockParent.getChildBlockMap();
+  } else {
+    targetBlockMap = contentState.getBlockMap();
+  }
+
+  var newBlocks = targetBlockMap
     .toSeq()
     .skipUntil((_, k) => k === startKey)
     .takeUntil((_, k) => k === endKey)
     .concat(Immutable.Map([[endKey, null]]))
     .map((_, k) => { return k === startKey ? modifiedStart : null; });
 
-  blockMap = blockMap.merge(newBlocks).filter(block => !!block);
+  targetBlockMap = targetBlockMap.merge(newBlocks).filter(block => !!block);
 
   var keyBeforeSelection = contentState.getKeyBefore(startKey);
   var keyAfterSelection = contentState.getKeyAfter(endKey);
   var newSelectionKey = startIsAtomic ? keyAfterSelection || keyBeforeSelection : startKey;
   var newSelectionOffset = startIsAtomic ? 0 : startOffset;
 
-  if (!blockMap.size) {
+  if (!targetBlockMap.size) {
     var newKey = generateRandomKey();
     var newBlock = startBlock.merge({
       text: '',
@@ -87,7 +96,7 @@ function removeRangeFromContentState(
       characterList: Immutable.List(),
       key: newKey,
     });
-    blockMap = blockMap.merge(
+    targetBlockMap = targetBlockMap.merge(
       Immutable.OrderedMap(
         [[newKey, newBlock]]
       )
@@ -96,8 +105,24 @@ function removeRangeFromContentState(
     newSelectionOffset = 0;
   }
 
+  let newTopLevelBlockMap;
+  if (startBlockParent) {
+    let topLevelBlockMap = contentState.getBlockMap();
+    newTopLevelBlockMap = topLevelBlockMap.merge(
+      Immutable.Map([[
+        startBlockParentKey,
+        startBlockParent.set('childBlockMap', targetBlockMap),
+      ]])
+    );
+  } else {
+    newTopLevelBlockMap = targetBlockMap;
+  }
+
+  contentState = contentState.merge({
+    blockMap: newTopLevelBlockMap,
+  });
+
   return contentState.merge({
-    blockMap,
     selectionBefore: selectionState,
     selectionAfter: selectionState.merge({
       anchorKey: newSelectionKey,

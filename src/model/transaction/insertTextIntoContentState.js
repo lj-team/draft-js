@@ -40,10 +40,9 @@ function insertTextIntoContentState(
     return contentState;
   }
 
-  var blockMap = contentState.getBlockMap();
   var key = selectionState.getStartKey();
   var offset = selectionState.getStartOffset();
-  var block = blockMap.get(key);
+  var block = contentState.getBlockForKey(key);
   var blockText = block.getText();
 
   var newBlock = block.merge({
@@ -61,8 +60,11 @@ function insertTextIntoContentState(
 
   var newOffset = offset + len;
 
-  return contentState.merge({
-    blockMap: blockMap.set(key, newBlock),
+  let newContentState = contentState.changeBlockForKey(
+    key,
+    newBlock,
+  );
+  return newContentState.merge({
     selectionAfter: selectionState.merge({
       anchorOffset: newOffset,
       focusOffset: newOffset,

@@ -19,30 +19,38 @@ var findRangesImmutable = require('./findRangesImmutable');
 import type CharacterMetadata from './CharacterMetadata';
 import type { DraftBlockType } from './DraftBlockType';
 import type { DraftInlineStyle } from './DraftInlineStyle';
+import type { BlockMap } from './BlockMap';
 
 var {
   List,
   Map,
   OrderedSet,
-  Record
+  Record,
+  OrderedMap
 } = Immutable;
 
 const EMPTY_SET = OrderedSet();
 
 var defaultRecord: {
   key: string;
+  parentKey: string;
   type: DraftBlockType;
   text: string;
   characterList: List<CharacterMetadata>;
   depth: number;
   data: Map<any, any>;
+  childBlockMap: ?BlockMap;
+  markers: List<any>;
 } = {
   key: '',
+  parentKey: '',
   type: 'unstyled',
   text: '',
   characterList: List(),
   depth: 0,
-  data: Map()
+  data: Map(),
+  childBlockMap: OrderedMap(),
+  markers: List()
 };
 
 var ContentBlockRecord = Record(defaultRecord);
@@ -50,6 +58,10 @@ var ContentBlockRecord = Record(defaultRecord);
 class ContentBlock extends ContentBlockRecord {
   getKey(): string {
     return this.get('key');
+  }
+
+  getParentKey(): string {
+    return this.get('parentKey');
   }
 
   getType(): DraftBlockType {
@@ -74,6 +86,14 @@ class ContentBlock extends ContentBlockRecord {
 
   getData(): Map<any, any> {
     return this.get('data');
+  }
+
+  getChildBlockMap(): Map<any, any> {
+    return this.get('childBlockMap');
+  }
+
+  getMarkers(): List<any> {
+    return this.get('markers');
   }
 
   getInlineStyleAt(offset: number): DraftInlineStyle {

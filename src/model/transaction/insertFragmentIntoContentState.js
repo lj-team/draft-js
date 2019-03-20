@@ -44,7 +44,7 @@ function insertFragmentIntoContentState(
   var finalOffset;
 
   if (fragmentSize === 1 && !firstFragmentPartIsAtomic) {
-    var targetBlock = blockMap.get(targetKey);
+    var targetBlock = contentState.getBlockForKey(targetKey);
     var pastedBlock = fragment.first();
     var text = targetBlock.getText();
     var chars = targetBlock.getCharacterList();
@@ -63,13 +63,13 @@ function insertFragmentIntoContentState(
       data: pastedBlock.getData(),
     });
 
-    blockMap = blockMap.set(targetKey, newBlock);
+    blockMap = contentState.changeBlockForKey(targetKey, newBlock).getBlockMap();
 
     finalKey = targetKey;
     finalOffset = targetOffset + pastedBlock.getText().length;
 
     return contentState.merge({
-      blockMap: blockMap.set(targetKey, newBlock),
+      blockMap,
       selectionBefore: selectionState,
       selectionAfter: selectionState.merge({
         anchorKey: finalKey,

@@ -35,11 +35,11 @@ var EditorBidiService = {
       bidiService.reset();
     }
 
-    var blockMap = content.getBlockMap();
-    var nextBidi = blockMap
+    const flatBlockMap = content.getFlatBlockMap();
+    var nextBidi = flatBlockMap
       .valueSeq()
       .map(block => nullthrows(bidiService).getDirection(block.getText()));
-    var bidiMap = OrderedMap(blockMap.keySeq().zip(nextBidi));
+    var bidiMap = OrderedMap(flatBlockMap.keySeq().zip(nextBidi));
 
     if (prevBidiMap != null && Immutable.is(prevBidiMap, bidiMap)) {
       return prevBidiMap;
