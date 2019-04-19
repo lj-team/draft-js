@@ -17,7 +17,7 @@ var DraftModifier = require('./DraftModifier');
 var EditorState = require('./EditorState');
 var UserAgent = require('fbjs/lib/UserAgent');
 
-var getEntityKeyForSelection = require('./getEntityKeyForSelection');
+var getEntitySetForSelection = require('./getEntitySetForSelection');
 var isSelectionAtLeafStart = require('./isSelectionAtLeafStart');
 var nullthrows = require('fbjs/lib/nullthrows');
 var setImmediate = require('fbjs/lib/setImmediate');
@@ -90,12 +90,12 @@ function editOnBeforeInput(editor: DraftEditor, e: SyntheticInputEvent): void {
 
   if (!selection.isCollapsed()) {
     e.preventDefault();
-    editor.update(replaceText(editorState, chars, editorState.getCurrentInlineStyle(), getEntityKeyForSelection(editorState.getCurrentContent(), editorState.getSelection())));
+    editor.update(replaceText(editorState, chars, editorState.getCurrentInlineStyle(), getEntitySetForSelection(editorState.getCurrentContent(), editorState.getSelection())));
     return;
   }
 
   var mayAllowNative = !isSelectionAtLeafStart(editorState);
-  var newEditorState = replaceText(editorState, chars, editorState.getCurrentInlineStyle(), getEntityKeyForSelection(editorState.getCurrentContent(), editorState.getSelection()));
+  var newEditorState = replaceText(editorState, chars, editorState.getCurrentInlineStyle(), getEntitySetForSelection(editorState.getCurrentContent(), editorState.getSelection()));
 
   if (!mayAllowNative) {
     e.preventDefault();

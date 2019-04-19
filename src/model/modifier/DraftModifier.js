@@ -15,6 +15,7 @@
 
 var CharacterMetadata = require('CharacterMetadata');
 var ContentStateInlineStyle = require('ContentStateInlineStyle');
+var ContentStateEntity = require('ContentStateEntity');
 var Immutable = require('immutable');
 
 var applyEntityToContentState = require('applyEntityToContentState');
@@ -64,7 +65,7 @@ var DraftModifier = {
 
     var character = CharacterMetadata.create({
       style: inlineStyle || OrderedSet(),
-      entity: entityKey || null,
+      entity: entityKey || OrderedSet(),
     });
 
     return insertTextIntoContentState(
@@ -220,6 +221,18 @@ var DraftModifier = {
       contentState,
       selectionState,
       inlineStyle
+    );
+  },
+
+  removeEntity: function(
+    contentState: ContentState,
+    selectionState: SelectionState,
+    entityKey: string
+  ): ContentState {
+    return ContentStateEntity.remove(
+      contentState,
+      selectionState,
+      entityKey
     );
   },
 

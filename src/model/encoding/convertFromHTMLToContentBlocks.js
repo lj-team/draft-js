@@ -338,7 +338,7 @@ function genFragment(
   blockTags: Array<string>,
   depth: number,
   blockRenderMap: DraftBlockRenderMap,
-  inEntity?: string
+  inEntity?: DraftEntity,
 ): {chunk: Chunk, entityMap: EntityMap} {
   var nodeName = node.nodeName.toLowerCase();
   var newBlock = false;
@@ -568,7 +568,8 @@ function getChunkForHTML(
     null,
     workingBlocks,
     -1,
-    blockRenderMap
+    blockRenderMap,
+    OrderedSet()
   );
 
 

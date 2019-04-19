@@ -128,7 +128,15 @@ function haveEqualEntity(
   charA: CharacterMetadata,
   charB: CharacterMetadata
 ): boolean {
-  return charA.getEntity() === charB.getEntity();
+  const entityA = charA.getEntity();
+  const entityB = charB.getEntity();
+  if (
+    !entityA.equals ||
+    !entityB.equals
+  ) {
+    return false;
+  }
+  return entityA.equals(entityB);
 }
 
 module.exports = ContentBlock;

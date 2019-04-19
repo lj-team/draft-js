@@ -31,13 +31,14 @@ function convertFromDraftStateToRaw(
     block.findEntityRanges(
       character => character.getEntity() !== null,
       start => {
-        // Stringify to maintain order of otherwise numeric keys.
-        var stringifiedEntityKey = DraftStringKey.stringify(
-          block.getEntityAt(start)
-        );
-        if (!entityStorageMap.hasOwnProperty(stringifiedEntityKey)) {
-          entityStorageMap[stringifiedEntityKey] = '' + (entityStorageKey++);
-        }
+        const entitySet = block.getEntityAt(start);
+        entitySet.forEach(entityKey => {
+          // Stringify to maintain order of otherwise numeric keys.
+          var stringifiedEntityKey = DraftStringKey.stringify(entityKey);
+          if (!entityStorageMap.hasOwnProperty(stringifiedEntityKey)) {
+            entityStorageMap[stringifiedEntityKey] = '' + (entityStorageKey++);
+          }
+        });
       }
     );
 
@@ -68,6 +69,8 @@ function convertFromDraftStateToRaw(
   return {
     entityMap: flippedStorageMap,
     blocks: rawBlocks,
+    // This emphasizes structure having entity sets instead of single entity keys
+    structureVersion: '2-multientity',
   };
 }
 

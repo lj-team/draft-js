@@ -40,48 +40,73 @@ function getCharacterRemovalRange(
 ): SelectionState {
   var start = selectionState.getStartOffset();
   var end = selectionState.getEndOffset();
-  var entityKey = block.getEntityAt(start);
-  if (!entityKey) {
+
+  const entitySet = block.getEntityAt(start);
+  if (entitySet.size == 0) {
     return selectionState;
   }
 
-  var entity = entityMap.__get(entityKey);
-  var mutability = entity.getMutability();
+  const entityMetadataSet = entitySet.map(entityKey => {
+    // Find the entity range that overlaps with our removal range.
+    const entityRanges = getRangesForDraftEntity(block, entityKey).filter(
+      (range) => start < range.end && end > range.start
+    );
+
+    invariant(
+      entityRanges.length == 1,
+      'There should only be one entity range within this removal range.'
+    );
+
+    return {
+      key: entityKey,
+      data: entityMap.__get(entityKey),
+      entityRange: entityRanges[0],
+    };
+  });
+
+  const mutableEntityMetadatas = entityMetadataSet.filter(
+    entityMetadata => entityMetadata.data.getMutability() === 'MUTABLE'
+  );
 
   // `MUTABLE` entities can just have the specified range of text removed
   // directly. No adjustments are needed.
-  if (mutability === 'MUTABLE') {
+  if (mutableEntityMetadatas.size === entitySet.size) {
     return selectionState;
   }
 
-  // Find the entity range that overlaps with our removal range.
-  var entityRanges = getRangesForDraftEntity(block, entityKey).filter(
-    (range) => start < range.end && end > range.start
+  const immutableEntityMetadatas = entityMetadataSet.filter(
+    entityMetadata => entityMetadata.data.getMutability() === 'IMMUTABLE'
   );
-
-  invariant(
-    entityRanges.length == 1,
-    'There should only be one entity range within this removal range.'
-  );
-
-  var entityRange = entityRanges[0];
 
   // For `IMMUTABLE` entity types, we will remove the entire entity range.
-  if (mutability === 'IMMUTABLE') {
+  if (immutableEntityMetadatas.size > 0) {
+    const immutableEntitiesRangeSum = immutableEntityMetadatas.reduce((reducedRange, currentMetadata) => {
+      if (!reducedRange) {
+        return currentMetadata.entityRange;
+      }
+      return {
+        start: Math.min(currentMetadata.entityRange.start, reducedRange.start),
+        end: Math.max(currentMetadata.entityRange.end, reducedRange.end),
+      };
+    });
     return selectionState.merge({
-      anchorOffset: entityRange.start,
-      focusOffset: entityRange.end,
+      anchorOffset: immutableEntitiesRangeSum.start,
+      focusOffset: immutableEntitiesRangeSum.end,
       isBackward: false,
     });
   }
+
+  const firstSegmentedEntityRange = entityMetadataSet.filter(
+    entityMetadata => entityMetadata.data.getMutability() === 'SEGMENTED'
+  ).entityRange;
 
   // For `SEGMENTED` entity types, determine the appropriate segment to
   // remove.
   var removalRange = DraftEntitySegments.getRemovalRange(
     start,
     end,
-    block.getText().slice(entityRange.start, entityRange.end),
-    entityRange.start,
+    block.getText().slice(firstSegmentedEntityRange.start, firstSegmentedEntityRange.end),
+    firstSegmentedEntityRange.start,
     direction
   );
 

@@ -19,7 +19,7 @@ var DraftModifier = require('DraftModifier');
 var DraftPasteProcessor = require('DraftPasteProcessor');
 var EditorState = require('EditorState');
 
-var getEntityKeyForSelection = require('getEntityKeyForSelection');
+var getEntitySetForSelection = require('getEntitySetForSelection');
 var getTextContentFromFiles = require('getTextContentFromFiles');
 const isEventHandled = require('isEventHandled');
 var splitTextIntoTextBlocks = require('splitTextIntoTextBlocks');
@@ -59,7 +59,7 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
         var blocks = splitTextIntoTextBlocks(fileText);
         var character = CharacterMetadata.create({
           style: editorState.getCurrentInlineStyle(),
-          entity: getEntityKeyForSelection(
+          entity: getEntitySetForSelection(
             editorState.getCurrentContent(),
             editorState.getSelection()
           ),
@@ -172,7 +172,7 @@ function editOnPaste(editor: DraftEditor, e: SyntheticClipboardEvent): void {
     var editorState = editor._latestEditorState;
     var character = CharacterMetadata.create({
       style: editorState.getCurrentInlineStyle(),
-      entity: getEntityKeyForSelection(
+      entity: getEntitySetForSelection(
         editorState.getCurrentContent(),
         editorState.getSelection()
       ),

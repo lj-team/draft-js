@@ -126,16 +126,18 @@ class DraftEditorBlock extends React.Component {
     var block = this.props.block;
     var blockKey = block.getKey();
     var text = block.getText();
-    var lastLeafSet = this.props.tree.size - 1;
     var hasSelection = isBlockOnSelectionEdge(this.props.selection, blockKey);
 
-    return this.props.tree.map((leafSet, ii) => {
+    const prepareTree = (tree, params = {}) => tree.map((leafSet, ii) => {
+      const givenOffsetKeyBase = params.offsetKeyBase;
+      const offsetKeyBase = `${givenOffsetKeyBase}-${ii}`;
+      const isLastElStack = params.isLastElStack.concat([ii === params.thisDepthLastIndex]);
+
       var leavesForLeafSet = leafSet.get('leaves');
-      var lastLeaf = leavesForLeafSet.size - 1;
-      var leaves = leavesForLeafSet.map((leaf, jj) => {
-        var offsetKey = DraftOffsetKey.encode(blockKey, ii, jj);
-        var start = leaf.get('start');
-        var end = leaf.get('end');
+      if (!leavesForLeafSet) {
+        var offsetKey = offsetKeyBase;
+        var start = leafSet.get('start');
+        var end = leafSet.get('end');
         return (
           <DraftEditorLeaf
             key={offsetKey}
@@ -148,11 +150,18 @@ class DraftEditorBlock extends React.Component {
             styleSet={block.getInlineStyleAt(start)}
             customStyleMap={this.props.customStyleMap}
             customStyleFn={this.props.customStyleFn}
-            isLast={ii === lastLeafSet && jj === lastLeaf}
+            isLast={isLastElStack.every(a => a)}
             setDraftEditorSelectionCustom={this.props.setDraftEditorSelectionCustom}
           />
         );
-      }).toArray();
+      }
+
+      var leaves = prepareTree(leavesForLeafSet, {
+        depth: params.depth + 1,
+        offsetKeyBase,
+        thisDepthLastIndex: leavesForLeafSet.size - 1,
+        isLastElStack,
+      });
 
       var decoratorKey = leafSet.get('decoratorKey');
       if (decoratorKey == null) {
@@ -191,12 +200,19 @@ class DraftEditorBlock extends React.Component {
           decoratedText={decoratedText}
           dir={dir}
           key={decoratorOffsetKey}
-          entityKey={block.getEntityAt(leafSet.get('start'))}
+          entitySet={block.getEntityAt(leafSet.get('start'))}
           offsetKey={decoratorOffsetKey}>
           {leaves}
         </DecoratorComponent>
       );
     }).toArray();
+
+    return prepareTree(this.props.tree, {
+      depth: 0,
+      offsetKeyBase: `${blockKey}`,
+      thisDepthLastIndex: this.props.tree.size - 1,
+      isLastElStack: [],
+    });
   }
 
   render(): React.Element<any> {

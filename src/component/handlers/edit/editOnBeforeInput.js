@@ -17,7 +17,7 @@ var DraftModifier = require('DraftModifier');
 var EditorState = require('EditorState');
 var UserAgent = require('UserAgent');
 
-var getEntityKeyForSelection = require('getEntityKeyForSelection');
+var getEntitySetForSelection = require('getEntitySetForSelection');
 var isSelectionAtLeafStart = require('isSelectionAtLeafStart');
 var nullthrows = require('nullthrows');
 var setImmediate = require('setImmediate');
@@ -114,7 +114,7 @@ function editOnBeforeInput(editor: DraftEditor, e: SyntheticInputEvent): void {
         editorState,
         chars,
         editorState.getCurrentInlineStyle(),
-        getEntityKeyForSelection(
+        getEntitySetForSelection(
           editorState.getCurrentContent(),
           editorState.getSelection()
         )
@@ -128,7 +128,7 @@ function editOnBeforeInput(editor: DraftEditor, e: SyntheticInputEvent): void {
     editorState,
     chars,
     editorState.getCurrentInlineStyle(),
-    getEntityKeyForSelection(
+    getEntitySetForSelection(
       editorState.getCurrentContent(),
       editorState.getSelection()
     )

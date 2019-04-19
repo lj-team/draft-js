@@ -33,12 +33,23 @@ function encodeEntityRanges(
     character => !!character.getEntity(),
     (/*number*/ start, /*number*/ end) => {
       var text = block.getText();
-      var key = block.getEntityAt(start);
+      var keySetMap = block.getEntityAt(start);
+      // Encode keys as numbers for range storage.
+      const keySet = keySetMap.toArray().map(
+        key => Number(storageMap[
+          DraftStringKey.stringify(key)
+        ])
+      );
+      // Preserving this field for backward compatibility
+      // with older versions which don't support sets of entities
+      const priorityKey = keySet[0];
+
       encoded.push({
         offset: strlen(text.slice(0, start)),
         length: strlen(text.slice(start, end)),
-        // Encode the key as a number for range storage.
-        key: Number(storageMap[DraftStringKey.stringify(key)]),
+        keySet,
+        // Preserving this field for backward compatibility
+        key: priorityKey,
       });
     }
   );

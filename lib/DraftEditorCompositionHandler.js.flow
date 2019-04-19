@@ -16,7 +16,7 @@ const DraftModifier = require('./DraftModifier');
 const EditorState = require('./EditorState');
 const Keys = require('fbjs/lib/Keys');
 
-const getEntityKeyForSelection = require('./getEntityKeyForSelection');
+const getEntitySetForSelection = require('./getEntitySetForSelection');
 const isSelectionAtLeafStart = require('./isSelectionAtLeafStart');
 
 import type DraftEditor from './DraftEditor.react';
@@ -141,9 +141,9 @@ var DraftEditorCompositionHandler = {
     });
 
     const currentStyle = editorState.getCurrentInlineStyle();
-    const entityKey = getEntityKeyForSelection(editorState.getCurrentContent(), editorState.getSelection());
+    const entitySet = getEntitySetForSelection(editorState.getCurrentContent(), editorState.getSelection());
 
-    const mustReset = !composedChars || isSelectionAtLeafStart(editorState) || currentStyle.size > 0 || entityKey !== null;
+    const mustReset = !composedChars || isSelectionAtLeafStart(editorState) || currentStyle.size > 0 || entitySet !== null;
 
     if (mustReset) {
       editor.restoreEditorDOM();
@@ -154,7 +154,7 @@ var DraftEditorCompositionHandler = {
     if (composedChars) {
       // If characters have been composed, re-rendering with the update
       // is sufficient to reset the editor.
-      const contentState = DraftModifier.replaceText(editorState.getCurrentContent(), editorState.getSelection(), composedChars, currentStyle, entityKey);
+      const contentState = DraftModifier.replaceText(editorState.getCurrentContent(), editorState.getSelection(), composedChars, currentStyle, entitySet);
       editor.update(EditorState.push(editorState, contentState, 'insert-characters'));
       return;
     }

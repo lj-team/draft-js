@@ -267,7 +267,7 @@ function hasValidLinkText(link: Node): boolean {
   return protocol === 'http:' || protocol === 'https:' || protocol === 'mailto:';
 }
 
-function genFragment(entityMap: EntityMap, node: Node, inlineStyle: DraftInlineStyle, lastList: string, inBlock: ?string, blockTags: Array<string>, depth: number, blockRenderMap: DraftBlockRenderMap, inEntity?: string): { chunk: Chunk; entityMap: EntityMap; } {
+function genFragment(entityMap: EntityMap, node: Node, inlineStyle: DraftInlineStyle, lastList: string, inBlock: ?string, blockTags: Array<string>, depth: number, blockRenderMap: DraftBlockRenderMap, inEntity?: DraftEntity): { chunk: Chunk; entityMap: EntityMap; } {
   var nodeName = node.nodeName.toLowerCase();
   var newBlock = false;
   var nextBlockType = 'unstyled';
@@ -428,7 +428,7 @@ function getChunkForHTML(html: string, DOMBuilder: Function, blockRenderMap: Dra
   var {
     chunk,
     entityMap: newEntityMap
-  } = genFragment(entityMap, safeBody, OrderedSet(), 'ul', null, workingBlocks, -1, blockRenderMap);
+  } = genFragment(entityMap, safeBody, OrderedSet(), 'ul', null, workingBlocks, -1, blockRenderMap, OrderedSet());
 
   // join with previous block to prevent weirdness on paste
   if (chunk.text.indexOf('\r') === 0) {

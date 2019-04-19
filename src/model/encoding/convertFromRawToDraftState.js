@@ -66,7 +66,14 @@ function convertFromRawToDraftState(
       var filteredEntityRanges = entityRanges
         .filter(range => fromStorageToLocal.hasOwnProperty(range.key))
         .map(range => {
-          return {...range, key: fromStorageToLocal[range.key]};
+          const sourceKeySet = range.keySet || [range.key];
+          return {
+            ...range,
+            key: fromStorageToLocal[range.key],
+            keySet: sourceKeySet.map(
+              storedKey => fromStorageToLocal[storedKey]
+            ),
+          };
         });
 
       var entities = decodeEntityRanges(text, filteredEntityRanges);

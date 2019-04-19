@@ -13,6 +13,11 @@
 
 'use strict';
 
+var {
+  OrderedSet,
+} = require('immutable');
+
+
 var UnicodeUtils = require('UnicodeUtils');
 
 var {substr} = UnicodeUtils;
@@ -24,7 +29,7 @@ function decodeEntityRanges(
   text: string,
   ranges: Array<Object>
 ): Array<?string> {
-  var entities = Array(text.length).fill(null);
+  var entities = Array(text.length).fill(OrderedSet());
   if (ranges) {
     ranges.forEach(
       range => {
@@ -33,7 +38,9 @@ function decodeEntityRanges(
         var start = substr(text, 0, range.offset).length;
         var end = start + substr(text, range.offset, range.length).length;
         for (var ii = start; ii < end; ii++) {
-          entities[ii] = range.key;
+          // Using `range.key` as a fallback value
+          // when importing old content from older DraftJS versions
+          entities[ii] = new OrderedSet(range.keySet || [range.key]);
         }
       }
     );

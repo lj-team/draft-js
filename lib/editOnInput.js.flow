@@ -101,18 +101,23 @@ function editOnInput(editor: DraftEditor, e: SyntheticEvent): void {
     isBackward: false
   });
 
-  const entityKey = block.getEntityAt(start);
-  const entity = entityKey && content.getEntity(entityKey);
-  const entityType = entity && entity.getMutability();
-  const preserveEntity = entityType === 'MUTABLE';
+  const entitySet = block.getEntityAt(start);
+  const mutableEntities = entitySet.filter(entityKey => {
+    const contentEntityData = content.getEntity(entityKey);
+    if (contentEntityData && contentEntityData.getMutability() === 'MUTABLE') {
+      return true;
+    }
+    return false;
+  });
+  const allEntitiesAreMutable = mutableEntities.equals(entitySet);
 
   // Immutable or segmented entities cannot properly be handled by the
   // default browser undo, so we have to use a different change type to
   // force using our internal undo method instead of falling through to the
   // native browser undo.
-  const changeType = preserveEntity ? 'spellcheck-change' : 'apply-entity';
+  const changeType = allEntitiesAreMutable ? 'spellcheck-change' : 'apply-entity';
 
-  const newContent = DraftModifier.replaceText(content, targetRange, domText, block.getInlineStyleAt(start), preserveEntity ? block.getEntityAt(start) : null);
+  const newContent = DraftModifier.replaceText(content, targetRange, domText, block.getInlineStyleAt(start), mutableEntities);
 
   var anchorOffset, focusOffset, startOffset, endOffset;
 

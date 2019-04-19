@@ -37,8 +37,9 @@ const generateRandomKey = require('generateRandomKey');
 const getDefaultKeyBinding = require('getDefaultKeyBinding');
 const getVisibleSelectionRect = require('getVisibleSelectionRect');
 const keyCommandPlainBackspace = require('keyCommandPlainBackspace');
-const getEntityKeyForSelection = require('getEntityKeyForSelection');
+const getEntitySetForSelection = require('getEntitySetForSelection');
 const getDraftEditorSelection = require('getDraftEditorSelection');
+const findRangesImmutable = require('findRangesImmutable');
 
 
 const DraftPublic = {
@@ -72,7 +73,8 @@ const DraftPublic = {
   getVisibleSelectionRect,
   keyCommandPlainBackspace,
   getDraftEditorSelection,
-  getEntityKeyForSelection,
+  getEntitySetForSelection,
+  findRangesImmutable,
 };
 
 module.exports = DraftPublic;

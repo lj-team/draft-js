@@ -86,26 +86,89 @@ var BlockTree = {
 
     var chars = block.getCharacterList();
 
-    findRangesImmutable(
-      decorations,
-      areEqual,
-      returnTrue,
-      (start, end) => {
-        leafSets.push(
-          new DecoratorRange({
-            start,
-            end,
-            decoratorKey: decorations.get(start),
-            leaves: generateLeaves(
-              chars.slice(start, end).toList(),
-              start
-            ),
-          })
-        );
+    const getNthDecKey = (n, decoratorString) => {
+      if (!decoratorString || !decoratorString.length) {
+        return null;
       }
-    );
+      return decoratorString.split('-')[n + 1];
+    };
 
-    return List(leafSets);
+    const nthDecKeyMatch = (n) => (a, b) => {
+      const targetKeyInA = getNthDecKey(n, a);
+      const targetKeyInB = getNthDecKey(n, b);
+      return targetKeyInA === targetKeyInB;
+    };
+
+    // Produces recursive `leaf` structures
+    const generateSubTree = (params = {}) => {
+      const {
+        decKeyLevel,
+      } = params;
+      const decorationsSlice = params.decorations;
+      let outputTree = [];
+      findRangesImmutable(
+        decorationsSlice,
+        nthDecKeyMatch(decKeyLevel),
+        returnTrue,
+        (start, end) => {
+          const decRangeBasis = {
+            start: start + params.rangeOffset,
+            end: end + params.rangeOffset,
+          };
+          const firstCharDecStr = decorationsSlice.get(start);
+          const firstCharNthLvlDec = getNthDecKey(
+            decKeyLevel,
+            firstCharDecStr
+          );
+          if (firstCharNthLvlDec) {
+            // We simplify model by dropping mentions of wrapping entity key
+            decRangeBasis.decoratorKey = `0-${firstCharNthLvlDec}`;
+          } else {
+            decRangeBasis.decoratorKey = null;
+          }
+          if (start === 0 && end === decorationsSlice.size) {
+            decRangeBasis.leaves = generateLeaves(
+              chars.slice(
+                start + params.rangeOffset,
+                end + params.rangeOffset,
+              ).toList(),
+              start + params.rangeOffset,
+            );
+            if (decKeyLevel > 0) {
+              outputTree = decRangeBasis.leaves;
+              return;
+            }
+          } else {
+            const subTree = generateSubTree({
+              decorations: decorationsSlice.slice(start, end),
+              decKeyLevel: decKeyLevel + 1,
+              rangeOffset: params.rangeOffset + start,
+            });
+            decRangeBasis.leaves = subTree;
+          }
+          outputTree.push(new DecoratorRange(decRangeBasis));
+        }
+      );
+      return List(outputTree);
+    };
+
+    const adjustedDecArr = decorations.map((dec) => {
+      if (
+        !dec ||
+        dec === '0-' ||
+        !dec.replace
+      ) {
+        return null;
+      }
+      return dec.replace(',', '-');
+    });
+    leafSets = generateSubTree({
+      decorations: adjustedDecArr,
+      decKeyLevel: 0,
+      rangeOffset: 0,
+    });
+
+    return leafSets;
   },
 
   /**

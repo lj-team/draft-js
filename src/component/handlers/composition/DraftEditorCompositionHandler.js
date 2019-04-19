@@ -16,7 +16,7 @@ const DraftModifier = require('DraftModifier');
 const EditorState = require('EditorState');
 const Keys = require('Keys');
 
-const getEntityKeyForSelection = require('getEntityKeyForSelection');
+const getEntitySetForSelection = require('getEntitySetForSelection');
 const isSelectionAtLeafStart = require('isSelectionAtLeafStart');
 
 import type DraftEditor from 'DraftEditor.react';
@@ -141,7 +141,7 @@ var DraftEditorCompositionHandler = {
     });
 
     const currentStyle = editorState.getCurrentInlineStyle();
-    const entityKey = getEntityKeyForSelection(
+    const entitySet = getEntitySetForSelection(
       editorState.getCurrentContent(),
       editorState.getSelection()
     );
@@ -150,7 +150,7 @@ var DraftEditorCompositionHandler = {
       !composedChars ||
       isSelectionAtLeafStart(editorState) ||
       currentStyle.size > 0 ||
-      entityKey !== null
+      entitySet !== null
     );
 
     if (mustReset) {
@@ -167,7 +167,7 @@ var DraftEditorCompositionHandler = {
         editorState.getSelection(),
         composedChars,
         currentStyle,
-        entityKey
+        entitySet
       );
       editor.update(
         EditorState.push(

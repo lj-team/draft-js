@@ -28,7 +28,7 @@ import type { DraftRange } from './DraftRange';
  */
 function getRangesForDraftEntity(block: ContentBlock, key: string): Array<DraftRange> {
   var ranges = [];
-  block.findEntityRanges(c => c.getEntity() === key, (start, end) => {
+  block.findEntityRanges(c => c.getEntity().has(key), (start, end) => {
     ranges.push({ start, end });
   });
 

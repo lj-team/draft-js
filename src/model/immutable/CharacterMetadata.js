@@ -34,7 +34,7 @@ const EMPTY_SET = OrderedSet();
 
 var defaultRecord: CharacterMetadataConfig = {
   style: EMPTY_SET,
-  entity: null,
+  entity: EMPTY_SET,
 };
 
 var CharacterMetadataRecord = Record(defaultRecord);
@@ -50,6 +50,10 @@ class CharacterMetadata extends CharacterMetadataRecord {
 
   hasStyle(style: string): boolean {
     return this.getStyle().has(style);
+  }
+
+  hasEntity(entity: string): boolean {
+    return this.getEntites().has(entity);
   }
 
   static applyStyle(
@@ -72,10 +76,16 @@ class CharacterMetadata extends CharacterMetadataRecord {
     record: CharacterMetadata,
     entityKey: ?string,
   ): CharacterMetadata {
-    var withEntity = record.getEntity() === entityKey ?
-      record :
-      record.set('entity', entityKey);
+    var withEntity = record.set('entity', record.getEntity().add(entityKey));
     return CharacterMetadata.create(withEntity);
+  }
+
+  static removeEntity(
+    record: CharacterMetadata,
+    entity: string,
+  ): CharacterMetadata {
+    var withoutEntity = record.set('entity', record.getEntity().remove(entity));
+    return CharacterMetadata.create(withoutEntity);
   }
 
   /**
@@ -90,7 +100,7 @@ class CharacterMetadata extends CharacterMetadataRecord {
     }
 
     const defaultConfig: CharacterMetadataConfig =
-      {style: EMPTY_SET, entity: (null: ?string)};
+      {style: EMPTY_SET, entity: EMPTY_SET};
 
     // Fill in unspecified properties, if necessary.
     var configMap = Map(defaultConfig).merge(config);

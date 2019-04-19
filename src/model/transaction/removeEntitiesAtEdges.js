@@ -95,24 +95,33 @@ function removeForBlock(
   var chars = block.getCharacterList();
   var charBefore = offset > 0 ? chars.get(offset - 1) : undefined;
   var charAfter = offset < chars.count() ? chars.get(offset) : undefined;
-  var entityBeforeCursor = charBefore ? charBefore.getEntity() : undefined;
-  var entityAfterCursor = charAfter ? charAfter.getEntity() : undefined;
+  var entitySetBeforeCursor = charBefore ? charBefore.getEntity() : undefined;
+  var entitySetAfterCursor = charAfter ? charAfter.getEntity() : undefined;
 
-  if (entityAfterCursor && entityAfterCursor === entityBeforeCursor) {
-    var entity = entityMap.__get(entityAfterCursor);
-    if (entity.getMutability() !== 'MUTABLE') {
-      var {start, end} = getRemovalRange(chars, entityAfterCursor, offset);
-      var current;
-      while (start < end) {
-        current = chars.get(start);
-        chars = chars.set(start, CharacterMetadata.applyEntity(current, null));
-        start++;
-      }
-      return block.set('characterList', chars);
-    }
+  if (!entitySetAfterCursor || !entitySetBeforeCursor) {
+    return block;
   }
 
-  return block;
+  const bothSideEntities = entitySetBeforeCursor.filter(
+    entityKey => entitySetAfterCursor.contains(entityKey)
+  );
+  return bothSideEntities.reduce(
+    (reduction, entityKey) => {
+      var entity = entityMap.__get(entityKey);
+      if (entity.getMutability() !== 'MUTABLE') {
+        var {start, end} = getRemovalRange(chars, entityKey, offset);
+        var current;
+        while (start < end) {
+          current = chars.get(start);
+          chars = chars.set(start, CharacterMetadata.applyEntity(current, null));
+          start++;
+        }
+        return block.set('characterList', chars);
+      }
+      return block;
+    },
+    block
+  );
 }
 
 module.exports = removeEntitiesAtEdges;

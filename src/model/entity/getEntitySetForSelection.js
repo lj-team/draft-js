@@ -18,22 +18,22 @@ import type SelectionState from 'SelectionState';
 import type {EntityMap} from 'EntityMap';
 
 /**
- * Return the entity key that should be used when inserting text for the
- * specified target selection, only if the entity is `MUTABLE`. `IMMUTABLE`
+ * Return the entity set that should be used when inserting text for the
+ * specified target selection, only with entities which are `MUTABLE`. `IMMUTABLE`
  * and `SEGMENTED` entities should not be used for insertion behavior.
  */
-function getEntityKeyForSelection(
+function getEntitySetForSelection(
   contentState: ContentState,
   targetSelection: SelectionState
 ): ?string {
-  var entityKey;
+  var entitySet;
 
   if (targetSelection.isCollapsed()) {
     var key = targetSelection.getAnchorKey();
     var offset = targetSelection.getAnchorOffset();
     if (offset > 0) {
-      entityKey = contentState.getBlockForKey(key).getEntityAt(offset - 1);
-      return filterKey(contentState.getEntityMap(), entityKey);
+      entitySet = contentState.getBlockForKey(key).getEntityAt(offset - 1);
+      return filterKey(contentState.getEntityMap(), entitySet);
     }
     return null;
   }
@@ -42,11 +42,11 @@ function getEntityKeyForSelection(
   var startOffset = targetSelection.getStartOffset();
   var startBlock = contentState.getBlockForKey(startKey);
 
-  entityKey = startOffset === startBlock.getLength() ?
+  entitySet = startOffset === startBlock.getLength() ?
     null :
     startBlock.getEntityAt(startOffset);
 
-  return filterKey(contentState.getEntityMap(), entityKey);
+  return filterKey(contentState.getEntityMap(), entitySet);
 }
 
 /**
@@ -55,13 +55,16 @@ function getEntityKeyForSelection(
  */
 function filterKey(
   entityMap: EntityMap,
-  entityKey: ?string
+  entitySet: ?string
 ): ?string {
-  if (entityKey) {
-    var entity = entityMap.__get(entityKey);
-    return entity.getMutability() === 'MUTABLE' ? entityKey : null;
+  if (entitySet) {
+    const allEntitiesAreMutable = entitySet.every(entityKey => {
+      const entityData = entityMap.__get(entityKey);
+      return entityData.getMutability() === 'MUTABLE';
+    });
+    return allEntitiesAreMutable ? entitySet : null;
   }
   return null;
 }
 
-module.exports = getEntityKeyForSelection;
+module.exports = getEntitySetForSelection;
