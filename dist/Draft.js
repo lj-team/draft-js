@@ -1406,6 +1406,19 @@ var Draft =
 	    return this.get('key');
 	  };
 
+	  ContentBlock.prototype.setKey = function setKey(newKey) {
+	    var childBlockMap = this.getChildBlockMap();
+	    var newChildBlockMap = childBlockMap.map(function (b) {
+	      return b.merge({
+	        parentKey: newKey
+	      });
+	    });
+	    return this.merge({
+	      key: newKey,
+	      childBlockMap: newChildBlockMap
+	    });
+	  };
+
 	  ContentBlock.prototype.getParentKey = function getParentKey() {
 	    return this.get('parentKey');
 	  };
@@ -10374,7 +10387,7 @@ var Draft =
 
 	    // Insert fragment blocks after the head and before the tail.
 	    fragment.slice(firstFragmentPartIsAtomic ? 0 : 1, lastFragmentPartIsAtomic ? fragmentSize : fragmentSize - 1).forEach(function (fragmentBlock) {
-	      newBlockArr.push(fragmentBlock.set('key', generateRandomKey()));
+	      newBlockArr.push(fragmentBlock.setKey(generateRandomKey()));
 	    });
 
 	    // Modify tail portion of block.
@@ -10385,8 +10398,7 @@ var Draft =
 
 	    if (lastFragmentPartIsAtomic) {
 	      if (tailText) {
-	        var targetTail = block.merge({
-	          key: finalKey,
+	        var targetTail = block.setKey(finalKey).merge({
 	          text: tailText,
 	          characterList: tailCharacters
 	        });

@@ -128,7 +128,7 @@ function insertFragmentIntoContentState(
         lastFragmentPartIsAtomic ? fragmentSize : fragmentSize - 1,
       ).forEach(
         fragmentBlock => {
-          newBlockArr.push(fragmentBlock.set('key', generateRandomKey()));
+          newBlockArr.push(fragmentBlock.setKey(generateRandomKey()));
         }
       );
 
@@ -140,8 +140,9 @@ function insertFragmentIntoContentState(
 
       if (lastFragmentPartIsAtomic) {
         if (tailText) {
-          var targetTail = block.merge({
-            key: finalKey,
+          var targetTail = block.setKey(
+            finalKey
+          ).merge({
             text: tailText,
             characterList: tailCharacters,
           });

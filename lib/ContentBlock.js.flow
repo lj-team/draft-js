@@ -60,6 +60,17 @@ class ContentBlock extends ContentBlockRecord {
     return this.get('key');
   }
 
+  setKey(newKey: string): ContentBlock {
+    const childBlockMap = this.getChildBlockMap();
+    const newChildBlockMap = childBlockMap.map(b => b.merge({
+      parentKey: newKey
+    }));
+    return this.merge({
+      key: newKey,
+      childBlockMap: newChildBlockMap
+    });
+  }
+
   getParentKey(): string {
     return this.get('parentKey');
   }
