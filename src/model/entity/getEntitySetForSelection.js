@@ -13,9 +13,15 @@
 
 'use strict';
 
+var {
+  OrderedSet,
+} = require('immutable');
+
 import type ContentState from 'ContentState';
 import type SelectionState from 'SelectionState';
 import type {EntityMap} from 'EntityMap';
+
+const EMPTY_SET = OrderedSet();
 
 /**
  * Return the entity set that should be used when inserting text for the
@@ -26,7 +32,7 @@ function getEntitySetForSelection(
   contentState: ContentState,
   targetSelection: SelectionState
 ): ?string {
-  var entitySet;
+  var entitySet = EMPTY_SET;
 
   if (targetSelection.isCollapsed()) {
     var key = targetSelection.getAnchorKey();
@@ -35,16 +41,16 @@ function getEntitySetForSelection(
       entitySet = contentState.getBlockForKey(key).getEntityAt(offset - 1);
       return filterKey(contentState.getEntityMap(), entitySet);
     }
-    return null;
+    return entitySet;
   }
 
   var startKey = targetSelection.getStartKey();
   var startOffset = targetSelection.getStartOffset();
   var startBlock = contentState.getBlockForKey(startKey);
 
-  entitySet = startOffset === startBlock.getLength() ?
-    null :
-    startBlock.getEntityAt(startOffset);
+  if (startOffset !== startBlock.getLength()) {
+    entitySet = startBlock.getEntityAt(startOffset);
+  }
 
   return filterKey(contentState.getEntityMap(), entitySet);
 }

@@ -1,5 +1,5 @@
 /**
- * Draft v0.11.0-multientity
+ * Draft v0.11.0
  *
  * Copyright (c) 2013-present, Facebook, Inc.
  * All rights reserved.
@@ -2629,7 +2629,7 @@ var Draft =
 
 /***/ }),
 /* 23 */
-/***/ (function(module, exports) {
+/***/ (function(module, exports, __webpack_require__) {
 
 	/**
 	 * Copyright (c) 2013-present, Facebook, Inc.
@@ -2646,13 +2646,18 @@ var Draft =
 
 	'use strict';
 
+	var _require = __webpack_require__(1),
+	    OrderedSet = _require.OrderedSet;
+
+	var EMPTY_SET = OrderedSet();
+
 	/**
 	 * Return the entity set that should be used when inserting text for the
 	 * specified target selection, only with entities which are `MUTABLE`. `IMMUTABLE`
 	 * and `SEGMENTED` entities should not be used for insertion behavior.
 	 */
 	function getEntitySetForSelection(contentState, targetSelection) {
-	  var entitySet;
+	  var entitySet = EMPTY_SET;
 
 	  if (targetSelection.isCollapsed()) {
 	    var key = targetSelection.getAnchorKey();
@@ -2661,14 +2666,16 @@ var Draft =
 	      entitySet = contentState.getBlockForKey(key).getEntityAt(offset - 1);
 	      return filterKey(contentState.getEntityMap(), entitySet);
 	    }
-	    return null;
+	    return entitySet;
 	  }
 
 	  var startKey = targetSelection.getStartKey();
 	  var startOffset = targetSelection.getStartOffset();
 	  var startBlock = contentState.getBlockForKey(startKey);
 
-	  entitySet = startOffset === startBlock.getLength() ? null : startBlock.getEntityAt(startOffset);
+	  if (startOffset !== startBlock.getLength()) {
+	    entitySet = startBlock.getEntityAt(startOffset);
+	  }
 
 	  return filterKey(contentState.getEntityMap(), entitySet);
 	}
