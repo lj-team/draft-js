@@ -1,5 +1,5 @@
 /**
- * Draft v0.10.0
+ * Draft v0.11.0
  *
  * Copyright (c) 2013-present, Facebook, Inc.
  * All rights reserved.
@@ -11291,7 +11291,8 @@ var Draft =
 	var generateRandomKey = __webpack_require__(7);
 	var invariant = __webpack_require__(3);
 
-	var Map = Immutable.Map;
+	var Map = Immutable.Map,
+	    OrderedMap = Immutable.OrderedMap;
 
 
 	function splitBlockInContentState(contentState, selectionState) {
@@ -11315,7 +11316,8 @@ var Draft =
 	    key: keyBelow,
 	    text: text.slice(offset),
 	    characterList: chars.slice(offset),
-	    data: Map()
+	    data: Map(),
+	    childBlockMap: OrderedMap()
 	  });
 
 	  var blocksBefore = blockMap.toSeq().takeUntil(function (v) {

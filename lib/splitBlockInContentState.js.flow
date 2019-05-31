@@ -21,7 +21,7 @@ var invariant = require('fbjs/lib/invariant');
 import type ContentState from './ContentState';
 import type SelectionState from './SelectionState';
 
-const { Map } = Immutable;
+const { Map, OrderedMap } = Immutable;
 
 function splitBlockInContentState(contentState: ContentState, selectionState: SelectionState): ContentState {
   invariant(selectionState.isCollapsed(), 'Selection range must be collapsed.');
@@ -44,7 +44,8 @@ function splitBlockInContentState(contentState: ContentState, selectionState: Se
     key: keyBelow,
     text: text.slice(offset),
     characterList: chars.slice(offset),
-    data: Map()
+    data: Map(),
+    childBlockMap: OrderedMap()
   });
 
   var blocksBefore = blockMap.toSeq().takeUntil(v => v === blockToSplit);

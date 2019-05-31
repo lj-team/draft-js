@@ -21,7 +21,7 @@ var invariant = require('invariant');
 import type ContentState from 'ContentState';
 import type SelectionState from 'SelectionState';
 
-const {Map} = Immutable;
+const {Map, OrderedMap} = Immutable;
 
 function splitBlockInContentState(
   contentState: ContentState,
@@ -51,6 +51,7 @@ function splitBlockInContentState(
     text: text.slice(offset),
     characterList: chars.slice(offset),
     data: Map(),
+    childBlockMap: OrderedMap()
   });
 
   var blocksBefore = blockMap.toSeq().takeUntil(v => v === blockToSplit);
