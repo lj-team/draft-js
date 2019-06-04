@@ -126,7 +126,18 @@ var BlockTree = {
           } else {
             decRangeBasis.decoratorKey = null;
           }
-          if (start === 0 && end === decorationsSlice.size) {
+          const nextLevelDecKeys = decorationsSlice.toArray().slice(
+            decRangeBasis.start, decRangeBasis.end
+          ).map(
+            charDecoration => getNthDecKey(decKeyLevel + 1, charDecoration)
+          );
+          const allNextLevelKeysAreSame = nextLevelDecKeys.every(
+            decKeyForChar => decKeyForChar === nextLevelDecKeys[0]
+          );
+          if (
+            start === 0 && end === decorationsSlice.size &&
+            allNextLevelKeysAreSame
+          ) {
             decRangeBasis.leaves = generateLeaves(
               chars.slice(
                 start + params.rangeOffset,
