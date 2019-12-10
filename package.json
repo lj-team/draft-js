@@ -68,6 +68,7 @@
     "react-dom": "15.0.0-rc.1",
     "run-sequence": "^1.1.2",
     "through2": "^2.0.1",
+    "ua-parser-js": "github:faisalman/ua-parser-js#7ae3098778572742544385938a2726c4efa01a02",
     "vinyl-buffer": "^1.0.0",
     "webpack-stream": "^3.0.0"
   },
