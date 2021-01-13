@@ -20,7 +20,7 @@ var gulpUtil = require('gulp-util');
 var header = require('gulp-header');
 var packageData = require('./package.json');
 var rename = require('gulp-rename');
-var runSequence = require('run-sequence');
+var runSequence = require('gulp4-run-sequence');
 var through = require('through2');
 var webpackStream = require('webpack-stream');
 
@@ -179,7 +179,7 @@ gulp.task('css', function() {
     .pipe(gulp.dest(paths.dist));
 });
 
-gulp.task('dist', ['modules', 'css'], function() {
+gulp.task('dist', gulp.series('modules', 'css'), function() {
   var opts = {
     debug: true,
     output: 'Draft.js',
@@ -191,7 +191,7 @@ gulp.task('dist', ['modules', 'css'], function() {
     .pipe(gulp.dest(paths.dist));
 });
 
-gulp.task('dist:min', ['modules'], function() {
+gulp.task('dist:min', gulp.series('modules'), function() {
   var opts = {
     debug: false,
     output: 'Draft.min.js',
@@ -209,13 +209,13 @@ gulp.task('check-dependencies', function() {
 });
 
 gulp.task('watch', function() {
-  gulp.watch(paths.src, ['modules']);
+  gulp.watch(paths.src, gulp.series('modules'));
 });
 
 gulp.task('dev', function() {
-  gulp.watch(paths.src, ['modules', 'dist']);
+  gulp.watch(paths.src, gulp.series('modules', 'dist'));
 });
 
 gulp.task('default', function(cb) {
-  runSequence('clean', ['modules', 'flow'], ['dist', 'dist:min'], cb);
+  runSequence('clean', gulp.series('modules', 'flow'), gulp.series('dist', 'dist:min'), cb);
 });
