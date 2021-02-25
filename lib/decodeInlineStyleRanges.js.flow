@@ -7,15 +7,14 @@
  * of patent rights can be found in the PATENTS file in the same directory.
  *
  * @providesModule decodeInlineStyleRanges
- * @typechecks
+ * @format
  * @flow
  */
 
 'use strict';
 
-var UnicodeUtils = require('fbjs/lib/UnicodeUtils');
-
 var { OrderedSet } = require('immutable');
+var UnicodeUtils = require('fbjs/lib/UnicodeUtils');
 
 var { substr } = UnicodeUtils;
 

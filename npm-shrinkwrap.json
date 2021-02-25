@@ -1,0 +1,11 @@
+{
+  "//": [
+    "npm-shrinkwrap is one of the fixes for Node 12 vs. Gulp 3.x incompatibility issue.",
+    "See https://stackoverflow.com/questions/55921442/how-to-fix-referenceerror-primordials-is-not-defined-in-node" 
+  ],
+  "dependencies": {
+    "graceful-fs": {
+        "version": "4.2.2"
+     }
+  }
+}

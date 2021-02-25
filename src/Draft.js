@@ -7,6 +7,8 @@
  * of patent rights can be found in the PATENTS file in the same directory.
  *
  * @providesModule Draft
+ * @format
+ * @flow
  */
 
 'use strict';
@@ -30,8 +32,7 @@ const RichTextEditorUtil = require('RichTextEditorUtil');
 const SelectionState = require('SelectionState');
 
 const convertFromDraftStateToRaw = require('convertFromDraftStateToRaw');
-const convertFromHTMLToContentBlocks =
-  require('convertFromHTMLToContentBlocks');
+const convertFromHTMLToContentBlocks = require('convertFromHTMLToContentBlocks');
 const convertFromRawToDraftState = require('convertFromRawToDraftState');
 const generateRandomKey = require('generateRandomKey');
 const getDefaultKeyBinding = require('getDefaultKeyBinding');
@@ -39,7 +40,6 @@ const getVisibleSelectionRect = require('getVisibleSelectionRect');
 const keyCommandPlainBackspace = require('keyCommandPlainBackspace');
 const getEntityKeyForSelection = require('getEntityKeyForSelection');
 const getDraftEditorSelection = require('getDraftEditorSelection');
-
 
 const DraftPublic = {
   Editor: DraftEditor,

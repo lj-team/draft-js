@@ -7,17 +7,19 @@
  * of patent rights can be found in the PATENTS file in the same directory.
  *
  * @providesModule editOnSelect
+ * @format
  * @flow
  */
 
 'use strict';
 
+import type DraftEditor from './DraftEditor.react';
+
 var EditorState = require('./EditorState');
 var ReactDOM = require('react-dom');
 
 var getDraftEditorSelection = require('./getDraftEditorSelection');
-
-import type DraftEditor from './DraftEditor.react';
+const invariant = require('fbjs/lib/invariant');
 
 function editOnSelect(editor: DraftEditor, e: SyntheticEvent): void {
   if (editor.props.handleEditOnSelect) {
@@ -31,8 +33,10 @@ function editOnSelect(editor: DraftEditor, e: SyntheticEvent): void {
   }
 
   var editorState = editor.props.editorState;
-  var editorNode = ReactDOM.findDOMNode(editor.refs.editorContainer).firstChild;
-  var documentSelection = getDraftEditorSelection(editorState, editorNode);
+  const editorNode = ReactDOM.findDOMNode(editor.editorContainer);
+  invariant(editorNode, 'Missing editorNode');
+  invariant(editorNode.firstChild instanceof HTMLElement, 'editorNode.firstChild is not an HTMLElement');
+  var documentSelection = getDraftEditorSelection(editorState, editorNode.firstChild);
   // Let end-user help Editor parse some `document` `selection`s
   if (editor.props.adjustParsedDocumentSelection) {
     documentSelection = editor.props.adjustParsedDocumentSelection(documentSelection, editorState, editorNode);

@@ -25,7 +25,7 @@ function removeRangeFromContentState(
   selectionState: SelectionState
 ): ContentState {
 
-  var blockMap = contentState.getBlockMap();
+  let blockMap = contentState.getBlockMap();
   var startKey = selectionState.getStartKey();
   var startOffset = selectionState.getStartOffset();
   var endKey = selectionState.getEndKey();

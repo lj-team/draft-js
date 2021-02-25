@@ -90,21 +90,20 @@ then retrieve the metadata for that key in your custom component `render()`
 code.
 
 ```js
-import {Entity} from 'draft-js';
 class MediaComponent extends React.Component {
   render() {
-    const {block} = this.props;
+    const {block, contentState} = this.props;
     const {foo} = this.props.blockProps;
-    const data = Entity.get(block.getEntityAt(0)).getData();
+    const data = contentState.getEntity(block.getEntityAt(0)).getData();
     // Return a <figure> or some other content using this data.
   }
 }
 ```
 
-The `ContentBlock` object is made available within the custom component, along
-with the props defined at the top level. By extracting entity information from
-the `ContentBlock` and the `Entity` map, you can obtain the metadata required to
-render your custom component.
+The `ContentBlock` object and the `ContentState` record are made available
+within the custom component, along with the props defined at the top level. By
+extracting entity information from the `ContentBlock` and the `Entity` map, you
+can obtain the metadata required to render your custom component.
 
 _Retrieving the entity from the block is admittedly a bit of an awkward API,
 and is worth revisiting._

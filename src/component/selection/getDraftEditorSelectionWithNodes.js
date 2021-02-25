@@ -7,20 +7,20 @@
  * of patent rights can be found in the PATENTS file in the same directory.
  *
  * @providesModule getDraftEditorSelectionWithNodes
- * @typechecks
+ * @format
  * @flow
  */
 
 'use strict';
+
+import type {DOMDerivedSelection} from 'DOMDerivedSelection';
+import type EditorState from 'EditorState';
 
 var findAncestorOffsetKey = require('findAncestorOffsetKey');
 var getSelectionOffsetKeyForNode = require('getSelectionOffsetKeyForNode');
 var getUpdatedSelectionState = require('getUpdatedSelectionState');
 var invariant = require('invariant');
 var nullthrows = require('nullthrows');
-
-import type {DOMDerivedSelection} from 'DOMDerivedSelection';
-import type EditorState from 'EditorState';
 
 type SelectionPoint = {
   key: string,
@@ -37,7 +37,7 @@ function getDraftEditorSelectionWithNodes(
   anchorNode: Node,
   anchorOffset: number,
   focusNode: Node,
-  focusOffset: number
+  focusOffset: number,
 ): DOMDerivedSelection {
   var anchorIsTextNode = anchorNode.nodeType === Node.TEXT_NODE;
   var focusIsTextNode = focusNode.nodeType === Node.TEXT_NODE;
@@ -52,7 +52,7 @@ function getDraftEditorSelectionWithNodes(
         nullthrows(findAncestorOffsetKey(anchorNode)),
         anchorOffset,
         nullthrows(findAncestorOffsetKey(focusNode)),
-        focusOffset
+        focusOffset,
       ),
       needsRecovery: false,
     };
@@ -101,7 +101,8 @@ function getDraftEditorSelectionWithNodes(
     // cursor from a non-zero offset on one block, through empty blocks,
     // to a matching non-zero offset on other text blocks.
     if (anchorNode === focusNode && anchorOffset === focusOffset) {
-      needsRecovery = !!anchorNode.firstChild && anchorNode.firstChild.nodeName !== 'BR';
+      needsRecovery =
+        !!anchorNode.firstChild && anchorNode.firstChild.nodeName !== 'BR';
     }
   }
 
@@ -111,7 +112,7 @@ function getDraftEditorSelectionWithNodes(
       anchorPoint.key,
       anchorPoint.offset,
       focusPoint.key,
-      focusPoint.offset
+      focusPoint.offset,
     ),
     needsRecovery,
   };
@@ -120,8 +121,14 @@ function getDraftEditorSelectionWithNodes(
 /**
  * Identify the first leaf descendant for the given node.
  */
-function getFirstLeaf(node: Node): Node {
-  while (node.firstChild && getSelectionOffsetKeyForNode(node.firstChild)) {
+function getFirstLeaf(node: any): Node {
+  while (
+    node.firstChild &&
+    // data-blocks has no offset
+    ((node.firstChild instanceof Element &&
+      node.firstChild.getAttribute('data-blocks') === 'true') ||
+      getSelectionOffsetKeyForNode(node.firstChild))
+  ) {
     node = node.firstChild;
   }
   return node;
@@ -130,8 +137,14 @@ function getFirstLeaf(node: Node): Node {
 /**
  * Identify the last leaf descendant for the given node.
  */
-function getLastLeaf(node: Node): Node {
-  while (node.lastChild && getSelectionOffsetKeyForNode(node.lastChild)) {
+function getLastLeaf(node: any): Node {
+  while (
+    node.lastChild &&
+    // data-blocks has no offset
+    ((node.lastChild instanceof Element &&
+      node.lastChild.getAttribute('data-blocks') === 'true') ||
+      getSelectionOffsetKeyForNode(node.lastChild))
+  ) {
     node = node.lastChild;
   }
   return node;
@@ -140,15 +153,15 @@ function getLastLeaf(node: Node): Node {
 function getPointForNonTextNode(
   editorRoot: ?HTMLElement,
   startNode: Node,
-  childOffset: number
+  childOffset: number,
 ): SelectionPoint {
   let node = startNode;
   var offsetKey: ?string = findAncestorOffsetKey(node);
 
   invariant(
     offsetKey != null ||
-    editorRoot && (editorRoot === node || editorRoot.firstChild === node),
-    'Unknown node in selection range.'
+      (editorRoot && (editorRoot === node || editorRoot.firstChild === node)),
+    'Unknown node in selection range.',
   );
 
   // If the editorRoot is the selection, step downward into the content
@@ -157,7 +170,7 @@ function getPointForNonTextNode(
     node = node.firstChild;
     invariant(
       node instanceof Element && node.getAttribute('data-contents') === 'true',
-      'Invalid DraftEditorContents structure.'
+      'Invalid DraftEditorContents structure.',
     );
     if (childOffset > 0) {
       childOffset = node.childNodes.length;
